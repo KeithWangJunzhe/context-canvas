@@ -153,6 +153,22 @@ Bundle generation decision:
 7. Bundle output should be inspectable and editable.
 8. User-triggered testing only; do not keep dev server running unless asked.
 
+## Project Shell
+
+Created on 2026-07-28:
+
+- GitHub repository: https://github.com/KeithWangJunzhe/context-canvas
+- Figma design file: https://www.figma.com/design/niYXxdhD4xwKbTi6YRlwc8
+- Repository visibility: private initial repo, suitable for later public showcase.
+- Initial local commit: `Initial Context Canvas PoC`.
+
+Figma setup:
+
+- Created a `Context Canvas` design file.
+- Added the current live UI capture.
+- Uploaded two user-feedback screenshots as reference material.
+- Added concise PoC decision notes directly on canvas.
+
 ## Known Issues / Follow-ups
 
 - Markdown parser is rough. Consider `react-markdown` or Tiptap/ProseMirror later if selection anchoring matters.
