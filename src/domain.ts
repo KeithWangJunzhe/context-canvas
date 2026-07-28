@@ -154,6 +154,10 @@ export function generateBundleMarkdown(workspace: Workspace) {
     if (block.tags.includes('question')) questions.push(line)
   }
 
+  const addDocumentBody = (node: ContextNode, body: string) => {
+    included.push([`### ${node.title}`, '', body].join('\n'))
+  }
+
   const addRegion = (node: ContextNode, region: ImageRegion) => {
     const line = `- ${node.imageName || node.title} region [${region.box.join(', ')}]: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
     if (region.status === 'excluded') excluded.push(line)
@@ -166,9 +170,10 @@ export function generateBundleMarkdown(workspace: Workspace) {
       const body = node.body?.trim()
       const hasExcludedDocument = node.blocks.some((block) => block.status === 'excluded' && !block.isGenerated)
       if (body && !hasExcludedDocument) {
-        included.push(`- ${node.title}: full local document is included by default.`)
+        addDocumentBody(node, body)
       }
       node.blocks.forEach((block) => {
+        if (hasExcludedDocument && block.status === 'included' && !block.isGenerated) addBlock(node, block)
         if (block.status === 'pinned' || block.status === 'excluded' || block.isGenerated) addBlock(node, block)
       })
       node.regions.forEach((region) => addRegion(node, region))

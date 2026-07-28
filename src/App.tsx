@@ -19,6 +19,7 @@ import {
 } from '@xyflow/react'
 import {
   Archive,
+  ArrowLeft,
   BoxSelect,
   Download,
   FileText,
@@ -336,13 +337,22 @@ function DocumentWorkspace({
   node,
   onAddBlock,
   onUpdateBlock,
+  onExit,
 }: {
   node: ContextNode
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
+  onExit: () => void
 }) {
   return (
     <div className="document-workspace">
+      <div className="document-workspace-bar">
+        <button className="secondary-button" onClick={onExit}>
+          <ArrowLeft size={16} />
+          Save & Back
+        </button>
+        <span>Changes are saved in the workspace automatically.</span>
+      </div>
       <MarkdownPreview
         node={node}
         variant="workspace"
@@ -734,6 +744,7 @@ export function App() {
   const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(sampleWorkspace))
   const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(sampleWorkspace))
   const [selectedNodeId, setSelectedNodeId] = useState<string>('node_chat_idea')
+  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [importNotice, setImportNotice] = useState('')
@@ -741,6 +752,7 @@ export function App() {
   const [bundleDraftEdited, setBundleDraftEdited] = useState(false)
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
+  const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
   const bundleToDownload = bundleDraftEdited ? bundleDraft : bundle
 
@@ -780,6 +792,7 @@ export function App() {
       },
     ])
     setSelectedNodeId(node.id)
+    setActiveDocumentId(node.type === 'document' ? node.id : null)
   }
 
   const importFile = async (file: File) => {
@@ -953,7 +966,14 @@ export function App() {
             </div>
             <div className="source-list">
               {workspace.nodes.map((node) => (
-                <button key={node.id} className={selectedNodeId === node.id ? 'source-item active' : 'source-item'} onClick={() => setSelectedNodeId(node.id)}>
+                <button
+                  key={node.id}
+                  className={selectedNodeId === node.id ? 'source-item active' : 'source-item'}
+                  onClick={() => {
+                    setSelectedNodeId(node.id)
+                    setActiveDocumentId(node.type === 'document' ? node.id : null)
+                  }}
+                >
                   <span className="node-icon">{nodeIcon(node.type)}</span>
                   <span>{node.title}</span>
                 </button>
@@ -967,8 +987,8 @@ export function App() {
           </aside>
 
           <section className="canvas-pane">
-            {selectedNode?.type === 'document' ? (
-              <DocumentWorkspace node={selectedNode} onAddBlock={onAddBlock} onUpdateBlock={onUpdateBlock} />
+            {activeDocument ? (
+              <DocumentWorkspace node={activeDocument} onAddBlock={onAddBlock} onUpdateBlock={onUpdateBlock} onExit={() => setActiveDocumentId(null)} />
             ) : (
               <ReactFlow
                 nodes={flowNodes}
@@ -977,7 +997,11 @@ export function App() {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
-                onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+                onNodeClick={(_, node) => {
+                  setSelectedNodeId(node.id)
+                  const contextNode = workspace.nodes.find((item) => item.id === node.id)
+                  setActiveDocumentId(contextNode?.type === 'document' ? contextNode.id : null)
+                }}
                 fitView
               >
                 <Background gap={22} size={1} />

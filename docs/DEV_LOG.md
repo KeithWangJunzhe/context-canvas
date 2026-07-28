@@ -130,6 +130,20 @@ Bundle generation decision:
 - Documents are treated as full-document included by default.
 - Pinned and excluded blocks/annotations are emitted explicitly.
 - If a document has excluded non-generated blocks, that changes how it appears in bundle output.
+- 2026-07-28 update: default included documents now emit their full text into `Included Evidence`, not just a placeholder sentence. If the user ignores original document blocks, the bundle falls back to emitting the remaining included original blocks plus pinned/excluded/generated annotation blocks.
+
+### Canvas / Document Editor Navigation
+
+Product decision:
+
+- The canvas is the main assembly surface. Opening a document reader is a focused editing mode, not a permanent replacement for the canvas.
+
+Current implementation:
+
+- `selectedNodeId` controls the selected source and right inspector.
+- `activeDocumentId` controls whether the center pane is showing the document reader.
+- Document editing has a `Save & Back` control. Edits are already autosaved into workspace state; the button exits focused reader mode and returns the center pane to the canvas.
+- The structured block editor remains in the right inspector for now, even though it will need a cleaner high-volume UI later.
 
 ### Image Annotation
 
@@ -180,7 +194,7 @@ Figma setup:
 - No workspace load/import yet, only download/export.
 - Image upload uses object URLs; exported workspaces do not preserve image file bytes.
 - Bundle JSON export is in PRD but not fully implemented as a separate button.
-- Canvas disappears when a document is selected because center pane becomes the reader. This is probably acceptable for now but may need tabs later.
+- Block inspector gets visually noisy with many generated annotations.
 
 ## Next Good Tasks
 

@@ -227,6 +227,16 @@ button {
   background: #f4f5f6;
 }
 
+.document-workspace-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 920px;
+  margin: 0 auto 10px;
+  color: #69727d;
+  font-size: 12px;
+}
+
 .canvas-node {
   width: 236px;
   min-height: 118px;
