@@ -43,6 +43,8 @@ export interface ContextNode {
   type: NodeType
   title: string
   body?: string
+  sourceName?: string
+  sourcePath?: string
   imageUrl?: string
   imageName?: string
   imageMime?: string

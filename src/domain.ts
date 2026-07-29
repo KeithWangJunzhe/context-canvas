@@ -70,7 +70,7 @@ export function sliceTextToBlocks(text: string, nodeId: string, mode: 'chat' | '
     }))
 }
 
-export function createTextNode(type: 'chat' | 'document' | 'note', title: string, body: string): ContextNode {
+export function createTextNode(type: 'chat' | 'document' | 'note', title: string, body: string, sourceName?: string, sourcePath?: string): ContextNode {
   const id = createId('node')
   const now = new Date().toISOString()
   const blocks =
@@ -92,6 +92,8 @@ export function createTextNode(type: 'chat' | 'document' | 'note', title: string
     type,
     title,
     body,
+    sourceName,
+    sourcePath,
     blocks:
       blocks.length > 0 || !body.trim()
         ? blocks
@@ -112,12 +114,14 @@ export function createTextNode(type: 'chat' | 'document' | 'note', title: string
   }
 }
 
-export function createImageNode(title: string, imageUrl: string, imageName: string, imageMime?: string, imageSize?: number): ContextNode {
+export function createImageNode(title: string, imageUrl: string, imageName: string, imageMime?: string, imageSize?: number, sourcePath?: string): ContextNode {
   const now = new Date().toISOString()
   return {
     id: createId('node'),
     type: 'image',
     title,
+    sourceName: imageName,
+    sourcePath,
     imageUrl,
     imageName,
     imageMime,
@@ -139,25 +143,20 @@ export function toggleTag(tags: BlockTag[], tag: BlockTag) {
 
 export function generateBundleMarkdown(workspace: Workspace) {
   const pinned: string[] = []
-  const included: string[] = []
-  const imageRegions: string[] = []
-  const excluded: string[] = []
-  const questions: string[] = []
+  const sourceSections: string[] = []
 
   const addBlock = (node: ContextNode, block: ContextBlock) => {
     const text = block.text?.trim()
-    if (!text) return
+    if (!text) return ''
     const reason = block.reason ? `\n  Reason: ${block.reason}` : ''
     const role = block.role ? ` (${block.role})` : ''
     const line = `- ${node.title}${role}: ${text}${reason}`
     if (block.status === 'pinned') pinned.push(line)
-    if (block.status === 'included') included.push(line)
-    if (block.status === 'excluded') excluded.push(line)
-    if (block.tags.includes('question')) questions.push(line)
+    return line
   }
 
   const addDocumentBody = (node: ContextNode, body: string) => {
-    included.push([`### ${node.title}`, '', body].join('\n'))
+    return [`#### Full Document`, '', body].join('\n')
   }
 
   const addRegion = (node: ContextNode, region: ImageRegion) => {
@@ -167,28 +166,81 @@ export function generateBundleMarkdown(workspace: Workspace) {
       region.fontFamily ? `font=${region.fontFamily}` : '',
     ].filter(Boolean)
     const detailText = details.length > 0 ? ` (${details.join(', ')})` : ''
-    const line = `- ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
-    if (region.status === 'excluded') excluded.push(line)
-    else imageRegions.push(line)
+    return `- ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
+  }
+
+  const sourceConnections = (node: ContextNode) => {
+    const related = workspace.edges.filter((edge) => edge.from === node.id || edge.to === node.id)
+    if (related.length === 0) return ['- None']
+    return related.map((edge) => {
+      const peerId = edge.from === node.id ? edge.to : edge.from
+      const peer = workspace.nodes.find((item) => item.id === peerId)
+      const direction = edge.from === node.id ? 'To' : 'From'
+      return `- ${direction} ${peer?.title || peerId}: ${edge.label || 'related'}`
+    })
   }
 
   workspace.nodes.forEach((node) => {
     if (node.type === 'start' || node.type === 'end' || node.type === 'bundle') return
+    const included: string[] = []
+    const imageRegions: string[] = []
+    const excluded: string[] = []
+    const questions: string[] = []
+    const sourceName = node.sourceName || node.imageName || node.title
+    const sourcePath = node.sourcePath || node.imageName || 'Unavailable in browser import'
+
     if (node.type === 'document') {
       const body = node.body?.trim()
       const hasExcludedDocument = node.blocks.some((block) => block.status === 'excluded' && !block.isGenerated)
       if (body && !hasExcludedDocument) {
-        addDocumentBody(node, body)
+        included.push(addDocumentBody(node, body))
       }
       node.blocks.forEach((block) => {
-        if (hasExcludedDocument && block.status === 'included' && !block.isGenerated) addBlock(node, block)
-        if (block.status === 'pinned' || block.status === 'excluded' || block.isGenerated) addBlock(node, block)
+        const line = addBlock(node, block)
+        if (!line) return
+        if (hasExcludedDocument && block.status === 'included' && !block.isGenerated) included.push(line)
+        if ((block.status === 'included' && block.isGenerated) || block.status === 'pinned') included.push(line)
+        if (block.status === 'excluded') excluded.push(line)
+        if (block.tags.includes('question')) questions.push(line)
       })
-      node.regions.forEach((region) => addRegion(node, region))
-      return
+    } else {
+      node.blocks.forEach((block) => {
+        const line = addBlock(node, block)
+        if (!line) return
+        if (block.status === 'included' || block.status === 'pinned') included.push(line)
+        if (block.status === 'excluded') excluded.push(line)
+        if (block.tags.includes('question')) questions.push(line)
+      })
     }
-    node.blocks.forEach((block) => addBlock(node, block))
-    node.regions.forEach((region) => addRegion(node, region))
+    node.regions.forEach((region) => {
+      const line = addRegion(node, region)
+      if (region.status === 'excluded') excluded.push(line)
+      else imageRegions.push(line)
+    })
+
+    sourceSections.push(
+      [
+        `### ${node.title}`,
+        '',
+        `- Type: ${node.type}`,
+        `- File name: ${sourceName}`,
+        `- Source path: ${sourcePath}`,
+        '- Connections:',
+        ...sourceConnections(node),
+        '',
+        '#### Included Evidence',
+        included.join('\n') || '- None',
+        '',
+        '#### Image Annotations',
+        imageRegions.join('\n') || '- None',
+        '',
+        '#### Excluded / Stale Context',
+        excluded.join('\n') || '- None',
+        '',
+        '#### Open Questions',
+        questions.join('\n') || '- None',
+      ].join('\n'),
+    )
   })
 
   return [
@@ -200,17 +252,8 @@ export function generateBundleMarkdown(workspace: Workspace) {
     '## Pinned Requirements',
     pinned.join('\n') || '- None',
     '',
-    '## Included Evidence',
-    included.join('\n') || '- None',
-    '',
-    '## Image Annotations',
-    imageRegions.join('\n') || '- None',
-    '',
-    '## Excluded / Stale Context',
-    excluded.join('\n') || '- None',
-    '',
-    '## Open Questions',
-    questions.join('\n') || '- None',
+    '## Context Sources',
+    sourceSections.join('\n\n') || '- None',
     '',
   ].join('\n')
 }

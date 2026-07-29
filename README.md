@@ -12,7 +12,8 @@ Context Canvas explores a workflow where users can import source material, previ
 - In-text selection annotations for finer-grained pin/include/ignore decisions.
 - Image annotation with transparent bounding boxes and text boxes.
 - Canvas assembly with manually editable source connections.
-- Editable bundle preview before export.
+- Editable bundle preview before export, grouped by source component with file metadata and connection labels.
+- New canvas flow with an option to download the current bundle before clearing the workspace.
 - Local-first behavior: imported source files are read in the browser and are not modified. Workspace state is stored in localStorage for the PoC.
 - Imported images are embedded as Data URLs so previews survive refresh/restart and workspace JSON export/import. This can make saved workspaces large.
 

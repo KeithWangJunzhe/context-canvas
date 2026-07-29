@@ -170,6 +170,9 @@ Current implementation:
 - Connections can be selected on the canvas, renamed in the inspector, and deleted from the inspector or React Flow edge deletion.
 - `End` has export controls for `md`, `txt`, and `json`. The top toolbar Bundle button shares the same selected output format.
 - `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
+- 2026-07-29 update: bundle markdown is grouped by source component. Each source section includes type, file name, source path/import path, connection labels, included evidence, image annotations, excluded context, and open questions.
+- Browser imports cannot expose the user's full local filesystem path for privacy reasons. `sourcePath` currently stores the browser-provided relative path when available, otherwise the file name. A desktop/plugin version can replace this with a real local path later.
+- The top toolbar has `New canvas`. It opens a confirmation dialog that lets the user download the current bundle before clearing the workspace into a fresh Start/End canvas.
 - 2026-07-29 update: source nodes can be deleted from the left rail. Deleting a source removes its related edges and exits any active document reader for that source.
 - Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions. Manual local saves show a short success/failure toast.
 - `localStorage` is a PoC persistence layer for text, blocks, edges, annotations, and small/medium imported images.

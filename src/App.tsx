@@ -139,6 +139,10 @@ function sourceTitle(fileName: string) {
   return fileName.replace(/\.[^.]+$/, '') || 'Imported source'
 }
 
+function sourcePath(file: File) {
+  return file.webkitRelativePath || file.name
+}
+
 function isTextSourceFile(file: File) {
   return /\.(md|markdown|txt)$/i.test(file.name) || /^text\//.test(file.type)
 }
@@ -200,6 +204,17 @@ function bundleDownload(format: OutputFormat, markdown: string, workspace: Works
     mime: format === 'md' ? 'text/markdown' : 'text/plain',
     content: markdown,
   }
+}
+
+function createEmptyWorkspace(): Workspace {
+  return withSystemNodes({
+    id: createId('workspace'),
+    title: 'Context Canvas PoC',
+    updatedAt: new Date().toISOString(),
+    nodes: [],
+    edges: [],
+    activeBundleId: endNodeId,
+  })
 }
 
 function addTag(tags: BlockTag[], tag: BlockTag) {
@@ -1126,6 +1141,49 @@ function BundlePreview({
   )
 }
 
+function NewCanvasModal({
+  onClose,
+  onDownloadAndCreate,
+  onCreate,
+}: {
+  onClose: () => void
+  onDownloadAndCreate: () => void
+  onCreate: () => void
+}) {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal confirm-modal">
+        <div className="modal-header">
+          <div>
+            <h2>Start a New Canvas?</h2>
+            <p>This clears the current workspace view and saves the new empty canvas locally.</p>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close new canvas dialog">
+            x
+          </button>
+        </div>
+        <div className="confirm-copy">
+          <p>Download the current bundle first if you want to keep the output from this canvas.</p>
+        </div>
+        <div className="modal-actions">
+          <button className="secondary-button" onClick={onClose}>
+            Cancel
+          </button>
+          <div className="confirm-actions">
+            <button className="secondary-button danger-action" onClick={onCreate}>
+              New without download
+            </button>
+            <button className="primary-button" onClick={onDownloadAndCreate}>
+              <Download size={16} />
+              Download bundle & new
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function App() {
   const initialWorkspace = useMemo(() => loadStoredWorkspace() || withSystemNodes(sampleWorkspace), [])
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace)
@@ -1135,6 +1193,7 @@ export function App() {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [showNewCanvas, setShowNewCanvas] = useState(false)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [importNotice, setImportNotice] = useState('')
   const [bundleDraft, setBundleDraft] = useState('')
@@ -1273,12 +1332,33 @@ export function App() {
     setSaveToast(ok ? 'Saved successfully' : 'Local save failed')
   }
 
+  const startNewCanvas = () => {
+    const next = createEmptyWorkspace()
+    historyPastRef.current = []
+    historyFutureRef.current = []
+    setWorkspace(next)
+    setSelectedNodeId(startNodeId)
+    setSelectedEdgeId(null)
+    setActiveDocumentId(null)
+    setActiveImageId(null)
+    setBundleDraft('')
+    setBundleDraftEdited(false)
+    setImportNotice('')
+    setShowNewCanvas(false)
+    setSaveToast('New canvas ready')
+  }
+
+  const downloadCurrentBundleAndStartNew = () => {
+    downloadBundle()
+    startNewCanvas()
+  }
+
   const importFile = async (file: File): Promise<ImportResult> => {
     setImportNotice('')
     if (/\.(png|jpe?g)$/i.test(file.name) || ['image/png', 'image/jpeg'].includes(file.type)) {
       try {
         const dataUrl = await fileToDataUrl(file)
-        addNode(createImageNode(sourceTitle(file.name), dataUrl, file.name, file.type, file.size))
+        addNode(createImageNode(sourceTitle(file.name), dataUrl, file.name, file.type, file.size, sourcePath(file)))
         return { ok: true }
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'Unknown image read error.'
@@ -1295,11 +1375,11 @@ export function App() {
         if (!text) {
           const notice = `${file.name} was added, but the docx parser did not find readable body text.${messageNote} The original file was not changed.`
           setImportNotice(notice)
-          addNode(createTextNode('document', sourceTitle(file.name), ''))
+          addNode(createTextNode('document', sourceTitle(file.name), '', file.name, sourcePath(file)))
           return { ok: true, notice }
         }
         if (messageNote) setImportNotice(`${file.name} imported with parser notes.${messageNote}`)
-        addNode(createTextNode('document', sourceTitle(file.name), text))
+        addNode(createTextNode('document', sourceTitle(file.name), text, file.name, sourcePath(file)))
         return { ok: true }
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'Unknown parser error.'
@@ -1315,10 +1395,10 @@ export function App() {
         if (!text.trim()) {
           const notice = `${file.name} was added, but no readable text came through. The original file was not changed.`
           setImportNotice(notice)
-          addNode(createTextNode('document', sourceTitle(file.name), text))
+          addNode(createTextNode('document', sourceTitle(file.name), text, file.name, sourcePath(file)))
           return { ok: true, notice }
         }
-        addNode(createTextNode('document', sourceTitle(file.name), text))
+        addNode(createTextNode('document', sourceTitle(file.name), text, file.name, sourcePath(file)))
         return { ok: true }
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'Unknown text read error.'
@@ -1522,6 +1602,10 @@ export function App() {
               <HardDrive size={16} />
               Save local
             </button>
+            <button className="secondary-button" onClick={() => setShowNewCanvas(true)}>
+              <Plus size={16} />
+              New canvas
+            </button>
             <button className="icon-button" onClick={undoWorkspace} disabled={historyPastRef.current.length === 0} aria-label="Undo">
               <Undo2 size={16} />
             </button>
@@ -1658,6 +1742,7 @@ export function App() {
             onImportFile={importFile}
           />
         )}
+        {showNewCanvas && <NewCanvasModal onClose={() => setShowNewCanvas(false)} onCreate={startNewCanvas} onDownloadAndCreate={downloadCurrentBundleAndStartNew} />}
       </div>
     </ReactFlowProvider>
   )
