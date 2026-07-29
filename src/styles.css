@@ -26,6 +26,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .app-shell {
   height: 100vh;
   display: grid;
@@ -322,6 +327,25 @@ button {
   font-size: 12px;
 }
 
+.image-workspace .document-workspace-bar {
+  max-width: 1180px;
+}
+
+.image-workspace-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.zoom-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.zoom-control input {
+  width: 180px;
+}
+
 .canvas-node {
   width: 236px;
   min-height: 118px;
@@ -589,6 +613,24 @@ button {
   opacity: 0.45;
 }
 
+.image-stage-scroll {
+  width: 100%;
+  overflow: auto;
+  border-radius: 8px;
+}
+
+.image-stage-scroll.is-workspace {
+  max-height: calc(100vh - 220px);
+  border: 1px solid #cfd6dd;
+  background: #e7ebef;
+}
+
+.image-stage-scroll.is-workspace .image-stage {
+  min-width: 760px;
+  border: 0;
+  border-radius: 0;
+}
+
 .image-stage {
   position: relative;
   width: 100%;
@@ -651,6 +693,15 @@ button {
   color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.danger-action {
+  color: #b42318;
+}
+
+.danger-action:hover {
+  border-color: #df8a8a;
+  background: #fff0f0;
 }
 
 .hint {

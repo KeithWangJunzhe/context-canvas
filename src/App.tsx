@@ -27,15 +27,18 @@ import {
   HardDrive,
   Image as ImageIcon,
   Link,
+  Maximize2,
   MessageSquareText,
   MousePointer2,
   NotebookPen,
   Pilcrow,
   Play,
   Plus,
+  Redo2,
   Scissors,
   Sparkles,
   Trash2,
+  Undo2,
 } from 'lucide-react'
 import mammoth from 'mammoth/mammoth.browser'
 import {
@@ -392,11 +395,13 @@ function MarkdownPreview({
   node,
   onAddSelection,
   onUpdateBlock,
+  onDeleteBlock,
   variant = 'panel',
 }: {
   node: ContextNode
   onAddSelection: (status: BlockStatus, text: string) => void
   onUpdateBlock: (blockId: string, patch: Partial<ContextBlock>) => void
+  onDeleteBlock?: (blockId: string) => void
   variant?: 'panel' | 'workspace'
 }) {
   const [selectedText, setSelectedText] = useState('')
@@ -498,6 +503,7 @@ function MarkdownPreview({
               if (node.blocks.some((item) => item.id === block.id)) onUpdateBlock(block.id, patch)
               else onAddSelection(patch.status || 'included', block.text || '')
             }}
+            onDelete={node.blocks.some((item) => item.id === block.id) ? () => onDeleteBlock?.(block.id) : undefined}
           />
         ))}
       </article>
@@ -509,11 +515,13 @@ function DocumentWorkspace({
   node,
   onAddBlock,
   onUpdateBlock,
+  onDeleteBlock,
   onExit,
 }: {
   node: ContextNode
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
+  onDeleteBlock: (nodeId: string, blockId: string) => void
   onExit: () => void
 }) {
   return (
@@ -539,6 +547,7 @@ function DocumentWorkspace({
           })
         }
         onUpdateBlock={(blockId, patch) => onUpdateBlock(node.id, blockId, patch)}
+        onDeleteBlock={(blockId) => onDeleteBlock(node.id, blockId)}
       />
     </div>
   )
@@ -578,10 +587,12 @@ function MarkdownBlock({
   block,
   annotations = [],
   onUpdate,
+  onDelete,
 }: {
   block: ContextBlock
   annotations?: ContextBlock[]
   onUpdate: (patch: Partial<ContextBlock>) => void
+  onDelete?: () => void
 }) {
   const text = block.text || ''
   const lines = text.split('\n')
@@ -608,6 +619,11 @@ function MarkdownBlock({
         >
           Ignore
         </button>
+        {onDelete && (
+          <button className="danger-action" onClick={onDelete} aria-label="Delete block">
+            <Trash2 size={13} />
+          </button>
+        )}
       </div>
       {isFence ? (
         <pre>{text.replace(/^```[a-zA-Z0-9_-]*\n?/, '').replace(/\n?```$/, '')}</pre>
@@ -638,9 +654,11 @@ function MarkdownBlock({
 function BlockEditor({
   block,
   onUpdate,
+  onDelete,
 }: {
   block: ContextBlock
   onUpdate: (patch: Partial<ContextBlock>) => void
+  onDelete: () => void
 }) {
   const setStatus = (status: BlockStatus) => onUpdate({ status: nextBlockStatus(block.status, status) })
   return (
@@ -654,6 +672,9 @@ function BlockEditor({
             </option>
           ))}
         </select>
+        <button className="icon-button danger-action" onClick={onDelete} aria-label="Delete block">
+          <Trash2 size={14} />
+        </button>
       </div>
       <div className="quick-status-row">
         <button className={block.status === 'pinned' ? 'active' : ''} onClick={() => setStatus('pinned')}>
@@ -691,9 +712,13 @@ function BlockEditor({
 function ImageInspector({
   node,
   onAddRegion,
+  variant = 'panel',
+  zoom = 100,
 }: {
   node: ContextNode
   onAddRegion: (annotation: ImageAnnotationDraft) => void
+  variant?: 'panel' | 'workspace'
+  zoom?: number
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null)
   const [tool, setTool] = useState<ImageTool>('bbox')
@@ -779,48 +804,80 @@ function ImageInspector({
           ))}
         </select>
       </div>
-      <div
-        className="image-stage"
-        ref={stageRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        {node.imageUrl ? <img src={node.imageUrl} alt={node.title} /> : <div className="empty-image">No image</div>}
-        {node.regions.map((region) => (
-          <div
-            key={region.id}
-            className={`image-annotation ${region.kind === 'text' ? 'text-box' : 'bbox'} status-${region.status}`}
-            style={{
-              left: `${region.box[0]}%`,
-              top: `${region.box[1]}%`,
-              width: `${region.box[2]}%`,
-              height: `${region.box[3]}%`,
-              borderColor: region.color || imageAnnotationColors[0],
-              color: region.color || imageAnnotationColors[0],
-              fontFamily: region.fontFamily,
-            }}
-          >
-            <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{region.label || (region.kind === 'text' ? 'Text' : 'region')}</span>
-          </div>
-        ))}
-        {draft && (
-          <div
-            className={`image-annotation ${draft.kind === 'text' ? 'text-box' : 'bbox'} draft`}
-            style={{
-              left: `${draft.box[0]}%`,
-              top: `${draft.box[1]}%`,
-              width: `${draft.box[2]}%`,
-              height: `${draft.box[3]}%`,
-              borderColor: draft.color,
-              color: draft.color,
-              fontFamily: draft.fontFamily,
-            }}
-          />
-        )}
+      <div className={`image-stage-scroll ${variant === 'workspace' ? 'is-workspace' : ''}`}>
+        <div
+          className="image-stage"
+          ref={stageRef}
+          style={{ width: `${zoom}%` }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {node.imageUrl ? <img src={node.imageUrl} alt={node.title} /> : <div className="empty-image">No image</div>}
+          {node.regions.map((region) => (
+            <div
+              key={region.id}
+              className={`image-annotation ${region.kind === 'text' ? 'text-box' : 'bbox'} status-${region.status}`}
+              style={{
+                left: `${region.box[0]}%`,
+                top: `${region.box[1]}%`,
+                width: `${region.box[2]}%`,
+                height: `${region.box[3]}%`,
+                borderColor: region.color || imageAnnotationColors[0],
+                color: region.color || imageAnnotationColors[0],
+                fontFamily: region.fontFamily,
+              }}
+            >
+              <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{region.label || (region.kind === 'text' ? 'Text' : 'region')}</span>
+            </div>
+          ))}
+          {draft && (
+            <div
+              className={`image-annotation ${draft.kind === 'text' ? 'text-box' : 'bbox'} draft`}
+              style={{
+                left: `${draft.box[0]}%`,
+                top: `${draft.box[1]}%`,
+                width: `${draft.box[2]}%`,
+                height: `${draft.box[3]}%`,
+                borderColor: draft.color,
+                color: draft.color,
+                fontFamily: draft.fontFamily,
+              }}
+            />
+          )}
+        </div>
       </div>
       <p className="hint">{tool === 'bbox' ? 'Drag on the image to draw a bounding box.' : 'Click or drag on the image to place a text box.'}</p>
+    </div>
+  )
+}
+
+function ImageWorkspace({
+  node,
+  onAddRegion,
+  onExit,
+}: {
+  node: ContextNode
+  onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
+  onExit: () => void
+}) {
+  const [zoom, setZoom] = useState(140)
+  return (
+    <div className="document-workspace image-workspace">
+      <div className="document-workspace-bar">
+        <button className="secondary-button" onClick={onExit}>
+          <ArrowLeft size={16} />
+          Save & Back
+        </button>
+        <label className="zoom-control">
+          <span>Zoom {zoom}%</span>
+          <input type="range" min={100} max={240} step={10} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} />
+        </label>
+      </div>
+      <div className="image-workspace-inner">
+        <ImageInspector node={node} variant="workspace" zoom={zoom} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />
+      </div>
     </div>
   )
 }
@@ -831,14 +888,20 @@ function Inspector({
   onUpdateBlock,
   onAddRegion,
   onUpdateRegion,
+  onDeleteRegion,
   onAddBlock,
+  onDeleteBlock,
+  onOpenImageWorkspace,
 }: {
   node?: ContextNode
   onUpdateNode: (nodeId: string, patch: Partial<ContextNode>) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
   onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
   onUpdateRegion: (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus; color?: string; fontFamily?: string }) => void
+  onDeleteRegion: (nodeId: string, regionId: string) => void
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
+  onDeleteBlock: (nodeId: string, blockId: string) => void
+  onOpenImageWorkspace: (nodeId: string) => void
 }) {
   if (!node) {
     return (
@@ -859,7 +922,15 @@ function Inspector({
         <input value={node.title} onChange={(event) => onUpdateNode(node.id, { title: event.target.value })} />
       </div>
 
-      {node.type === 'image' && <ImageInspector node={node} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />}
+      {node.type === 'image' && (
+        <>
+          <button className="secondary-button wide" onClick={() => onOpenImageWorkspace(node.id)}>
+            <Maximize2 size={16} />
+            Zoom edit
+          </button>
+          <ImageInspector node={node} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />
+        </>
+      )}
 
       {node.regions.length > 0 && (
         <section className="panel-section">
@@ -875,6 +946,9 @@ function Inspector({
                     </option>
                   ))}
                 </select>
+                <button className="icon-button danger-action" onClick={() => onDeleteRegion(node.id, region.id)} aria-label="Delete image annotation">
+                  <Trash2 size={14} />
+                </button>
               </div>
               <div className="region-style-row">
                 {imageAnnotationColors.map((item) => (
@@ -918,7 +992,7 @@ function Inspector({
             <p className="hint">Preview and selection live in the center reader. This panel edits the structured blocks that feed the bundle.</p>
           )}
           {node.blocks.map((block) => (
-            <BlockEditor key={block.id} block={block} onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)} />
+            <BlockEditor key={block.id} block={block} onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)} onDelete={() => onDeleteBlock(node.id, block.id)} />
           ))}
         </section>
       )}
@@ -998,6 +1072,7 @@ export function App() {
   const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(initialWorkspace))
   const [selectedNodeId, setSelectedNodeId] = useState<string>(() => initialWorkspace.nodes.find((node) => node.type !== 'start' && node.type !== 'end')?.id || startNodeId)
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
+  const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [importNotice, setImportNotice] = useState('')
@@ -1006,9 +1081,12 @@ export function App() {
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
   const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? 'Loaded local workspace' : 'Autosave ready'))
   const [saveToast, setSaveToast] = useState('')
+  const historyPastRef = useRef<Workspace[]>([])
+  const historyFutureRef = useRef<Workspace[]>([])
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
   const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
+  const activeImage = activeImageId ? workspace.nodes.find((node) => node.id === activeImageId && node.type === 'image') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
   const bundleToDownload = bundleDraftEdited ? bundleDraft : bundle
   const downloadBundle = useCallback(() => {
@@ -1029,6 +1107,16 @@ export function App() {
     const timeout = window.setTimeout(() => setSaveToast(''), 1800)
     return () => window.clearTimeout(timeout)
   }, [saveToast])
+
+  useEffect(() => {
+    if (selectedNode) return
+    setSelectedNodeId(workspace.nodes.find((node) => node.type !== 'start' && node.type !== 'end')?.id || startNodeId)
+  }, [selectedNode, workspace.nodes])
+
+  useEffect(() => {
+    if (activeDocumentId && !activeDocument) setActiveDocumentId(null)
+    if (activeImageId && !activeImage) setActiveImageId(null)
+  }, [activeDocument, activeDocumentId, activeImage, activeImageId])
 
   useEffect(() => {
     setFlowNodes((current) =>
@@ -1057,8 +1145,29 @@ export function App() {
 
   const updateWorkspace = (updater: (workspace: Workspace) => Workspace) => {
     setWorkspace((current) => {
-      return withSystemNodes({ ...updater(current), updatedAt: new Date().toISOString() })
+      const next = withSystemNodes({ ...updater(current), updatedAt: new Date().toISOString() })
+      if (JSON.stringify(next) !== JSON.stringify(current)) {
+        historyPastRef.current = [...historyPastRef.current.slice(-49), current]
+        historyFutureRef.current = []
+      }
+      return next
     })
+  }
+
+  const undoWorkspace = () => {
+    const previous = historyPastRef.current[historyPastRef.current.length - 1]
+    if (!previous) return
+    historyPastRef.current = historyPastRef.current.slice(0, -1)
+    historyFutureRef.current = [workspace, ...historyFutureRef.current.slice(0, 49)]
+    setWorkspace(previous)
+  }
+
+  const redoWorkspace = () => {
+    const next = historyFutureRef.current[0]
+    if (!next) return
+    historyFutureRef.current = historyFutureRef.current.slice(1)
+    historyPastRef.current = [...historyPastRef.current.slice(-49), workspace]
+    setWorkspace(next)
   }
 
   const addNode = (node: ContextNode) => {
@@ -1077,6 +1186,7 @@ export function App() {
     }))
     setSelectedNodeId(node.id)
     setActiveDocumentId(node.type === 'document' ? node.id : null)
+    setActiveImageId(node.type === 'image' ? node.id : null)
   }
 
   const deleteSource = (nodeId: string) => {
@@ -1088,6 +1198,7 @@ export function App() {
       edges: current.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId),
     }))
     if (activeDocumentId === nodeId) setActiveDocumentId(null)
+    if (activeImageId === nodeId) setActiveImageId(null)
     if (selectedNodeId === nodeId) {
       const fallback = workspace.nodes.find((item) => item.id !== nodeId && item.type !== 'start' && item.type !== 'end') || workspace.nodes.find((item) => item.id === startNodeId)
       setSelectedNodeId(fallback?.id || startNodeId)
@@ -1197,6 +1308,15 @@ export function App() {
     }))
   }
 
+  const onDeleteBlock = (nodeId: string, blockId: string) => {
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) =>
+        node.id === nodeId ? { ...node, updatedAt: new Date().toISOString(), blocks: node.blocks.filter((block) => block.id !== blockId) } : node,
+      ),
+    }))
+  }
+
   const onAddBlock = (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => {
     updateWorkspace((current) => ({
       ...current,
@@ -1256,6 +1376,15 @@ export function App() {
     }))
   }
 
+  const onDeleteRegion = (nodeId: string, regionId: string) => {
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) =>
+        node.id === nodeId ? { ...node, updatedAt: new Date().toISOString(), regions: node.regions.filter((region) => region.id !== regionId) } : node,
+      ),
+    }))
+  }
+
   return (
     <ReactFlowProvider>
       <div
@@ -1294,6 +1423,12 @@ export function App() {
               <HardDrive size={16} />
               Save local
             </button>
+            <button className="icon-button" onClick={undoWorkspace} disabled={historyPastRef.current.length === 0} aria-label="Undo">
+              <Undo2 size={16} />
+            </button>
+            <button className="icon-button" onClick={redoWorkspace} disabled={historyFutureRef.current.length === 0} aria-label="Redo">
+              <Redo2 size={16} />
+            </button>
             <button className="secondary-button" onClick={() => downloadText('context-workspace.json', JSON.stringify(workspace, null, 2), 'application/json')}>
               <Download size={16} />
               Export workspace
@@ -1327,6 +1462,7 @@ export function App() {
                     onClick={() => {
                       setSelectedNodeId(node.id)
                       setActiveDocumentId(node.type === 'document' ? node.id : null)
+                      setActiveImageId(node.type === 'image' ? node.id : null)
                     }}
                   >
                     <span className="node-icon">{nodeIcon(node.type)}</span>
@@ -1347,7 +1483,9 @@ export function App() {
 
           <section className="canvas-pane">
             {activeDocument ? (
-              <DocumentWorkspace node={activeDocument} onAddBlock={onAddBlock} onUpdateBlock={onUpdateBlock} onExit={() => setActiveDocumentId(null)} />
+              <DocumentWorkspace node={activeDocument} onAddBlock={onAddBlock} onUpdateBlock={onUpdateBlock} onDeleteBlock={onDeleteBlock} onExit={() => setActiveDocumentId(null)} />
+            ) : activeImage ? (
+              <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onExit={() => setActiveImageId(null)} />
             ) : (
               <ReactFlow
                 nodes={flowNodes}
@@ -1360,6 +1498,7 @@ export function App() {
                   setSelectedNodeId(node.id)
                   const contextNode = workspace.nodes.find((item) => item.id === node.id)
                   setActiveDocumentId(contextNode?.type === 'document' ? contextNode.id : null)
+                  setActiveImageId(contextNode?.type === 'image' ? contextNode.id : null)
                 }}
                 fitView
               >
@@ -1375,7 +1514,14 @@ export function App() {
             onUpdateBlock={onUpdateBlock}
             onAddRegion={onAddRegion}
             onUpdateRegion={onUpdateRegion}
+            onDeleteRegion={onDeleteRegion}
             onAddBlock={onAddBlock}
+            onDeleteBlock={onDeleteBlock}
+            onOpenImageWorkspace={(nodeId) => {
+              setSelectedNodeId(nodeId)
+              setActiveDocumentId(null)
+              setActiveImageId(nodeId)
+            }}
           />
 
           <BundlePreview

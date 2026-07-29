@@ -171,6 +171,7 @@ Current implementation:
 - 2026-07-29 update: source nodes can be deleted from the left rail. Deleting a source removes its related edges and exits any active document reader for that source.
 - Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions. Manual local saves show a short success/failure toast.
 - `localStorage` is a PoC persistence layer for text, blocks, edges, and annotations. It is not the long-term image persistence layer because object URLs do not survive refresh reliably; image Blob persistence should move to IndexedDB later.
+- Top toolbar has basic undo/redo for workspace content operations. This covers imports, deletes, block edits, status changes, and annotations. It does not currently preserve ReactFlow-only viewport/node-position drag history as a first-class undo target.
 
 ### Image Annotation
 
@@ -181,6 +182,7 @@ Current implementation:
 - The image toolbar has five preset annotation colors and five text font choices.
 - Region metadata supports kind, box, color, font, label, note, status, and tags.
 - Image annotations are included in bundle output with type/color/font metadata.
+- Image nodes support both quick inspector annotation and a focused zoom editor with `Save & Back`.
 - Image file bytes are still not persisted across refresh; current image previews use object URLs.
 
 ## Key Product Decisions
@@ -219,7 +221,6 @@ Figma setup:
 - Markdown parser is rough. Consider `react-markdown` or Tiptap/ProseMirror later if selection anchoring matters.
 - In-text annotations use simple string matching, not durable offsets or AST positions.
 - Repeated identical text may highlight more than intended.
-- No delete annotation/block action yet.
 - No reason input in the floating menu yet; reason must be edited in the right inspector.
 - Image upload uses object URLs; exported workspaces do not preserve image file bytes.
 - Block inspector gets visually noisy with many generated annotations.
@@ -228,7 +229,6 @@ Figma setup:
 
 Short-term:
 
-- Add delete/remove for blocks and annotations.
 - Add quick reason editing after floating annotation.
 - Add a clearer distinction between source blocks and generated in-text annotations in the inspector.
 - Add explicit reset/clear local workspace.
