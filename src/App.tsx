@@ -164,6 +164,18 @@ async function extractDocxText(file: File) {
   }
 }
 
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result)
+      else reject(new Error('The browser did not return image data as text.'))
+    }
+    reader.onerror = () => reject(reader.error || new Error('The browser could not read the image file.'))
+    reader.readAsDataURL(file)
+  })
+}
+
 function bundleDownload(format: OutputFormat, markdown: string, workspace: Workspace) {
   if (format === 'json') {
     return {
@@ -1264,8 +1276,16 @@ export function App() {
   const importFile = async (file: File): Promise<ImportResult> => {
     setImportNotice('')
     if (/\.(png|jpe?g)$/i.test(file.name) || ['image/png', 'image/jpeg'].includes(file.type)) {
-      addNode(createImageNode(sourceTitle(file.name), URL.createObjectURL(file), file.name))
-      return { ok: true }
+      try {
+        const dataUrl = await fileToDataUrl(file)
+        addNode(createImageNode(sourceTitle(file.name), dataUrl, file.name, file.type, file.size))
+        return { ok: true }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'Unknown image read error.'
+        const notice = `${file.name} could not be read as an image: ${detail} The original file was not changed.`
+        setImportNotice(notice)
+        return { ok: false, notice }
+      }
     }
 
     if (isDocxFile(file)) {

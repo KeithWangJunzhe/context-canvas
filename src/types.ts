@@ -45,6 +45,8 @@ export interface ContextNode {
   body?: string
   imageUrl?: string
   imageName?: string
+  imageMime?: string
+  imageSize?: number
   blocks: ContextBlock[]
   regions: ImageRegion[]
   createdAt: string

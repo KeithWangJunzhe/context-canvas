@@ -112,7 +112,7 @@ export function createTextNode(type: 'chat' | 'document' | 'note', title: string
   }
 }
 
-export function createImageNode(title: string, imageUrl: string, imageName: string): ContextNode {
+export function createImageNode(title: string, imageUrl: string, imageName: string, imageMime?: string, imageSize?: number): ContextNode {
   const now = new Date().toISOString()
   return {
     id: createId('node'),
@@ -120,6 +120,8 @@ export function createImageNode(title: string, imageUrl: string, imageName: stri
     title,
     imageUrl,
     imageName,
+    imageMime,
+    imageSize,
     blocks: [],
     regions: [],
     createdAt: now,

@@ -172,7 +172,9 @@ Current implementation:
 - `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
 - 2026-07-29 update: source nodes can be deleted from the left rail. Deleting a source removes its related edges and exits any active document reader for that source.
 - Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions. Manual local saves show a short success/failure toast.
-- `localStorage` is a PoC persistence layer for text, blocks, edges, and annotations. It is not the long-term image persistence layer because object URLs do not survive refresh reliably; image Blob persistence should move to IndexedDB later.
+- `localStorage` is a PoC persistence layer for text, blocks, edges, annotations, and small/medium imported images.
+- 2026-07-29 update: imported images are stored as Data URLs in workspace state instead of temporary object URLs, so refresh/restart and workspace JSON export/import can preserve previews.
+- This is intentionally a PoC tradeoff: Data URLs make workspace JSON larger and may hit browser `localStorage` quota with many large screenshots. A future app should move image bytes to IndexedDB or a zipped workspace asset folder.
 - Top toolbar has basic undo/redo for workspace content operations. This covers imports, deletes, block edits, status changes, edges, and annotations. It does not currently preserve ReactFlow-only viewport/node-position drag history as a first-class undo target.
 - Manual `Save local` writes the current workspace to `localStorage`, shows a short toast, and clears the redo branch. This matches the user's expectation that saving after an undo establishes the current state as the active branch.
 
@@ -186,7 +188,7 @@ Current implementation:
 - Region metadata supports kind, box, color, font, label, note, status, and tags.
 - Image annotations are included in bundle output with type/color/font metadata.
 - Image nodes support both quick inspector annotation and a focused zoom editor with `Save & Back`.
-- Image file bytes are still not persisted across refresh; current image previews use object URLs.
+- Image previews persist across refresh and workspace JSON export/import because imported image files are encoded as Data URLs in the workspace.
 - Native browser image dragging is disabled inside the annotation stage, and the app shell only reacts to real file drags. This prevents bbox/text drawing from accidentally triggering the global import drop state.
 
 ## Key Product Decisions

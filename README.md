@@ -14,6 +14,7 @@ Context Canvas explores a workflow where users can import source material, previ
 - Canvas assembly with manually editable source connections.
 - Editable bundle preview before export.
 - Local-first behavior: imported source files are read in the browser and are not modified. Workspace state is stored in localStorage for the PoC.
+- Imported images are embedded as Data URLs so previews survive refresh/restart and workspace JSON export/import. This can make saved workspaces large.
 
 ## Status
 
