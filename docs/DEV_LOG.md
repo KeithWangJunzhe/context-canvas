@@ -1,6 +1,6 @@
 # Context Canvas PoC Dev Log
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 This file is a lightweight handoff note for future Codex work on the local PoC.
 
@@ -165,13 +165,16 @@ Current implementation:
 - Document editing has a `Save & Back` control. Edits are already autosaved into workspace state; the button exits focused reader mode and returns the center pane to the canvas.
 - The structured block editor remains in the right inspector for now, even though it will need a cleaner high-volume UI later.
 - 2026-07-29 update: `Start` and `End` are system nodes that are always normalized into the workspace. Older `bundle` nodes are treated as `End` for compatibility.
-- New imports auto-connect as `Start -> source -> End`.
+- New imports stay unconnected by default. The user decides which sources connect on the canvas.
+- If there are no user-authored source connections, bundle generation still follows workspace/import order, with pinned context emitted first.
+- Connections can be selected on the canvas, renamed in the inspector, and deleted from the inspector or React Flow edge deletion.
 - `End` has export controls for `md`, `txt`, and `json`. The top toolbar Bundle button shares the same selected output format.
 - `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
 - 2026-07-29 update: source nodes can be deleted from the left rail. Deleting a source removes its related edges and exits any active document reader for that source.
 - Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions. Manual local saves show a short success/failure toast.
 - `localStorage` is a PoC persistence layer for text, blocks, edges, and annotations. It is not the long-term image persistence layer because object URLs do not survive refresh reliably; image Blob persistence should move to IndexedDB later.
-- Top toolbar has basic undo/redo for workspace content operations. This covers imports, deletes, block edits, status changes, and annotations. It does not currently preserve ReactFlow-only viewport/node-position drag history as a first-class undo target.
+- Top toolbar has basic undo/redo for workspace content operations. This covers imports, deletes, block edits, status changes, edges, and annotations. It does not currently preserve ReactFlow-only viewport/node-position drag history as a first-class undo target.
+- Manual `Save local` writes the current workspace to `localStorage`, shows a short toast, and clears the redo branch. This matches the user's expectation that saving after an undo establishes the current state as the active branch.
 
 ### Image Annotation
 
@@ -184,6 +187,7 @@ Current implementation:
 - Image annotations are included in bundle output with type/color/font metadata.
 - Image nodes support both quick inspector annotation and a focused zoom editor with `Save & Back`.
 - Image file bytes are still not persisted across refresh; current image previews use object URLs.
+- Native browser image dragging is disabled inside the annotation stage, and the app shell only reacts to real file drags. This prevents bbox/text drawing from accidentally triggering the global import drop state.
 
 ## Key Product Decisions
 

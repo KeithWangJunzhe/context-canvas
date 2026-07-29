@@ -479,6 +479,13 @@ button:disabled {
   stroke: #8090a0;
 }
 
+.context-edge.selected path,
+.react-flow__edge.selected .context-edge path,
+.react-flow__edge.selected path {
+  stroke: #1f6feb;
+  stroke-width: 2.5;
+}
+
 .inspector {
   overflow: auto;
   padding: 14px;
@@ -509,6 +516,32 @@ button:disabled {
 
 .inspector-header input {
   font-weight: 700;
+}
+
+.edge-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.edge-editor > div {
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+}
+
+.edge-editor span {
+  display: block;
+  color: #69727d;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.edge-editor strong {
+  color: #1d2329;
+  font-size: 13px;
 }
 
 .panel-section h3 {
@@ -648,6 +681,9 @@ button:disabled {
   height: 100%;
   object-fit: contain;
   display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .image-annotation {

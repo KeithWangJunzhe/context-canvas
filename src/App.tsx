@@ -51,7 +51,7 @@ import {
   toggleTag,
 } from './domain'
 import { sampleWorkspace } from './sample'
-import { BlockStatus, BlockTag, ContextBlock, ContextNode, Workspace } from './types'
+import { BlockStatus, BlockTag, ContextBlock, ContextEdge, ContextNode, Workspace } from './types'
 
 const statusOptions: BlockStatus[] = ['included', 'excluded', 'pinned', 'needs_review']
 const tagOptions: BlockTag[] = ['requirement', 'decision', 'question', 'assumption', 'evidence', 'noise', 'bug', 'ui']
@@ -284,6 +284,10 @@ function makeFlowEdges(workspace: Workspace): Edge[] {
     markerEnd: { type: MarkerType.ArrowClosed },
     className: 'context-edge',
   }))
+}
+
+function isFileDrag(event: DragEvent<HTMLElement>) {
+  return Array.from(event.dataTransfer.types).includes('Files')
 }
 
 function ImportPanel({
@@ -809,12 +813,13 @@ function ImageInspector({
           className="image-stage"
           ref={stageRef}
           style={{ width: `${zoom}%` }}
+          onDragStart={(event) => event.preventDefault()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {node.imageUrl ? <img src={node.imageUrl} alt={node.title} /> : <div className="empty-image">No image</div>}
+          {node.imageUrl ? <img src={node.imageUrl} alt={node.title} draggable={false} onDragStart={(event) => event.preventDefault()} /> : <div className="empty-image">No image</div>}
           {node.regions.map((region) => (
             <div
               key={region.id}
@@ -884,7 +889,12 @@ function ImageWorkspace({
 
 function Inspector({
   node,
+  edge,
+  edgeFrom,
+  edgeTo,
   onUpdateNode,
+  onUpdateEdge,
+  onDeleteEdge,
   onUpdateBlock,
   onAddRegion,
   onUpdateRegion,
@@ -894,7 +904,12 @@ function Inspector({
   onOpenImageWorkspace,
 }: {
   node?: ContextNode
+  edge?: ContextEdge
+  edgeFrom?: ContextNode
+  edgeTo?: ContextNode
   onUpdateNode: (nodeId: string, patch: Partial<ContextNode>) => void
+  onUpdateEdge: (edgeId: string, patch: Partial<ContextEdge>) => void
+  onDeleteEdge: (edgeId: string) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
   onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
   onUpdateRegion: (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus; color?: string; fontFamily?: string }) => void
@@ -903,6 +918,40 @@ function Inspector({
   onDeleteBlock: (nodeId: string, blockId: string) => void
   onOpenImageWorkspace: (nodeId: string) => void
 }) {
+  if (edge) {
+    return (
+      <aside className="inspector">
+        <div className="inspector-header">
+          <span className="node-icon">
+            <Link size={16} />
+          </span>
+          <input value={edge.label} onChange={(event) => onUpdateEdge(edge.id, { label: event.target.value })} />
+        </div>
+        <section className="panel-section">
+          <h3>Connection</h3>
+          <div className="edge-editor">
+            <div>
+              <span>From</span>
+              <strong>{edgeFrom?.title || edge.from}</strong>
+            </div>
+            <div>
+              <span>To</span>
+              <strong>{edgeTo?.title || edge.to}</strong>
+            </div>
+            <label className="field">
+              <span>Label</span>
+              <input value={edge.label} onChange={(event) => onUpdateEdge(edge.id, { label: event.target.value })} placeholder="related" />
+            </label>
+            <button className="secondary-button danger-action wide" onClick={() => onDeleteEdge(edge.id)}>
+              <Trash2 size={16} />
+              Delete connection
+            </button>
+          </div>
+        </section>
+      </aside>
+    )
+  }
+
   if (!node) {
     return (
       <aside className="inspector">
@@ -981,7 +1030,7 @@ function Inspector({
         <div className="empty-state">
           <Play size={22} />
           <h2>Start Node</h2>
-          <p>This is the default entry point for source context. New imports connect from here automatically.</p>
+          <p>This is the default entry point for source context. New imports stay unconnected until you decide how the canvas should flow.</p>
         </div>
       )}
 
@@ -1081,10 +1130,14 @@ export function App() {
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
   const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? 'Loaded local workspace' : 'Autosave ready'))
   const [saveToast, setSaveToast] = useState('')
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const historyPastRef = useRef<Workspace[]>([])
   const historyFutureRef = useRef<Workspace[]>([])
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
+  const selectedEdge = selectedEdgeId ? workspace.edges.find((edge) => edge.id === selectedEdgeId) : undefined
+  const selectedEdgeFrom = selectedEdge ? workspace.nodes.find((node) => node.id === selectedEdge.from) : undefined
+  const selectedEdgeTo = selectedEdge ? workspace.nodes.find((node) => node.id === selectedEdge.to) : undefined
   const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
   const activeImage = activeImageId ? workspace.nodes.find((node) => node.id === activeImageId && node.type === 'image') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
@@ -1117,6 +1170,10 @@ export function App() {
     if (activeDocumentId && !activeDocument) setActiveDocumentId(null)
     if (activeImageId && !activeImage) setActiveImageId(null)
   }, [activeDocument, activeDocumentId, activeImage, activeImageId])
+
+  useEffect(() => {
+    if (selectedEdgeId && !selectedEdge) setSelectedEdgeId(null)
+  }, [selectedEdge, selectedEdgeId])
 
   useEffect(() => {
     setFlowNodes((current) =>
@@ -1174,17 +1231,9 @@ export function App() {
     updateWorkspace((current) => ({
       ...current,
       nodes: [...current.nodes, node],
-      edges: [
-        ...current.edges,
-        ...(current.nodes.some((item) => item.id === startNodeId)
-          ? [{ id: createId('edge'), from: startNodeId, to: node.id, label: 'input' }]
-          : []),
-        ...(current.nodes.some((item) => item.id === endNodeId)
-          ? [{ id: createId('edge'), from: node.id, to: endNodeId, label: 'feeds' }]
-          : []),
-      ],
     }))
     setSelectedNodeId(node.id)
+    setSelectedEdgeId(null)
     setActiveDocumentId(node.type === 'document' ? node.id : null)
     setActiveImageId(node.type === 'image' ? node.id : null)
   }
@@ -1207,6 +1256,7 @@ export function App() {
 
   const saveWorkspaceLocally = () => {
     const ok = saveStoredWorkspace(workspace)
+    if (ok) historyFutureRef.current = []
     setSaveNotice(ok ? 'Saved locally' : 'Local save failed')
     setSaveToast(ok ? 'Saved successfully' : 'Local save failed')
   }
@@ -1264,6 +1314,7 @@ export function App() {
   }
 
   const onDropFiles = async (event: DragEvent<HTMLDivElement>) => {
+    if (!isFileDrag(event)) return
     event.preventDefault()
     setIsDraggingFile(false)
     const files = Array.from(event.dataTransfer.files)
@@ -1273,7 +1324,19 @@ export function App() {
   }
 
   const onNodesChange = useCallback((changes: NodeChange<ContextFlowNode>[]) => setFlowNodes((nodes) => applyNodeChanges<ContextFlowNode>(changes, nodes)), [])
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => setFlowEdges((edges) => applyEdgeChanges(changes, edges)), [])
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    const removedIds = changes
+      .filter((change) => change.type === 'remove' && 'id' in change)
+      .map((change) => change.id)
+    setFlowEdges((edges) => applyEdgeChanges(changes, edges))
+    if (removedIds.length > 0) {
+      updateWorkspace((current) => ({
+        ...current,
+        edges: current.edges.filter((edge) => !removedIds.includes(edge.id)),
+      }))
+      setSelectedEdgeId((current) => (current && removedIds.includes(current) ? null : current))
+    }
+  }, [])
   const onConnect = useCallback(
     (connection: Connection) => {
       const edgeId = createId('edge')
@@ -1285,6 +1348,21 @@ export function App() {
     },
     [],
   )
+
+  const onUpdateEdge = (edgeId: string, patch: Partial<ContextEdge>) => {
+    updateWorkspace((current) => ({
+      ...current,
+      edges: current.edges.map((edge) => (edge.id === edgeId ? { ...edge, ...patch } : edge)),
+    }))
+  }
+
+  const onDeleteEdge = (edgeId: string) => {
+    updateWorkspace((current) => ({
+      ...current,
+      edges: current.edges.filter((edge) => edge.id !== edgeId),
+    }))
+    setSelectedEdgeId(null)
+  }
 
   const onUpdateNode = (nodeId: string, patch: Partial<ContextNode>) => {
     updateWorkspace((current) => ({
@@ -1390,6 +1468,7 @@ export function App() {
       <div
         className={`app-shell ${isDraggingFile ? 'is-dragging-file' : ''}`}
         onDragOver={(event) => {
+          if (!isFileDrag(event)) return
           event.preventDefault()
           setIsDraggingFile(true)
         }}
@@ -1496,10 +1575,18 @@ export function App() {
                 onConnect={onConnect}
                 onNodeClick={(_, node) => {
                   setSelectedNodeId(node.id)
+                  setSelectedEdgeId(null)
                   const contextNode = workspace.nodes.find((item) => item.id === node.id)
                   setActiveDocumentId(contextNode?.type === 'document' ? contextNode.id : null)
                   setActiveImageId(contextNode?.type === 'image' ? contextNode.id : null)
                 }}
+                onEdgeClick={(event, edge) => {
+                  event.stopPropagation()
+                  setSelectedEdgeId(edge.id)
+                  setActiveDocumentId(null)
+                  setActiveImageId(null)
+                }}
+                onPaneClick={() => setSelectedEdgeId(null)}
                 fitView
               >
                 <Background gap={22} size={1} />
@@ -1509,8 +1596,13 @@ export function App() {
           </section>
 
           <Inspector
-            node={selectedNode}
+            node={selectedEdge ? undefined : selectedNode}
+            edge={selectedEdge}
+            edgeFrom={selectedEdgeFrom}
+            edgeTo={selectedEdgeTo}
             onUpdateNode={onUpdateNode}
+            onUpdateEdge={onUpdateEdge}
+            onDeleteEdge={onDeleteEdge}
             onUpdateBlock={onUpdateBlock}
             onAddRegion={onAddRegion}
             onUpdateRegion={onUpdateRegion}

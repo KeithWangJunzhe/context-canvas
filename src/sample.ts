@@ -67,19 +67,6 @@ export const sampleWorkspace: Workspace = {
       blocks: [],
     },
   ],
-  edges: [
-    {
-      id: 'edge_start_chat',
-      from: 'node_start',
-      to: 'node_chat_idea',
-      label: 'input',
-    },
-    {
-      id: 'edge_chat_bundle',
-      from: 'node_chat_idea',
-      to: 'node_end',
-      label: 'feeds',
-    },
-  ],
+  edges: [],
   activeBundleId: 'node_end',
 }
