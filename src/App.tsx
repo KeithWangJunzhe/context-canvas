@@ -24,6 +24,7 @@ import {
   Download,
   FileText,
   Flag,
+  HardDrive,
   Image as ImageIcon,
   Link,
   MessageSquareText,
@@ -31,9 +32,9 @@ import {
   NotebookPen,
   Play,
   Plus,
-  Save,
   Scissors,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import mammoth from 'mammoth/mammoth.browser'
 import {
@@ -63,6 +64,7 @@ type ContextFlowNode = Node<ContextFlowData>
 const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const startNodeId = 'node_start'
 const endNodeId = 'node_end'
+const localWorkspaceKey = 'context-canvas.workspace.v1'
 
 function createSystemNode(id: string, type: 'start' | 'end', title: string): ContextNode {
   const now = new Date().toISOString()
@@ -95,6 +97,28 @@ function withSystemNodes(workspace: Workspace): Workspace {
       to: legacyBundleIds.includes(edge.to) ? endNodeId : edge.to,
     })),
     activeBundleId: endNodeId,
+  }
+}
+
+function loadStoredWorkspace() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(localWorkspaceKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Workspace
+    if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) return null
+    return withSystemNodes(parsed)
+  } catch {
+    return null
+  }
+}
+
+function saveStoredWorkspace(workspace: Workspace) {
+  try {
+    window.localStorage.setItem(localWorkspaceKey, JSON.stringify(workspace))
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -894,11 +918,11 @@ function BundlePreview({
 }
 
 export function App() {
-  const initialWorkspace = useMemo(() => withSystemNodes(sampleWorkspace), [])
+  const initialWorkspace = useMemo(() => loadStoredWorkspace() || withSystemNodes(sampleWorkspace), [])
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace)
   const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(initialWorkspace))
   const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(initialWorkspace))
-  const [selectedNodeId, setSelectedNodeId] = useState<string>('node_chat_idea')
+  const [selectedNodeId, setSelectedNodeId] = useState<string>(() => initialWorkspace.nodes.find((node) => node.type !== 'start' && node.type !== 'end')?.id || startNodeId)
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
@@ -906,6 +930,7 @@ export function App() {
   const [bundleDraft, setBundleDraft] = useState('')
   const [bundleDraftEdited, setBundleDraftEdited] = useState(false)
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
+  const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? 'Loaded local workspace' : 'Autosave ready'))
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
   const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
@@ -919,6 +944,10 @@ export function App() {
   useEffect(() => {
     if (!bundleDraftEdited) setBundleDraft(bundle)
   }, [bundle, bundleDraftEdited])
+
+  useEffect(() => {
+    setSaveNotice(saveStoredWorkspace(workspace) ? 'Saved locally' : 'Local save failed')
+  }, [workspace])
 
   useEffect(() => {
     setFlowNodes((current) =>
@@ -967,6 +996,25 @@ export function App() {
     }))
     setSelectedNodeId(node.id)
     setActiveDocumentId(node.type === 'document' ? node.id : null)
+  }
+
+  const deleteSource = (nodeId: string) => {
+    const node = workspace.nodes.find((item) => item.id === nodeId)
+    if (!node || node.type === 'start' || node.type === 'end') return
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.filter((item) => item.id !== nodeId),
+      edges: current.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId),
+    }))
+    if (activeDocumentId === nodeId) setActiveDocumentId(null)
+    if (selectedNodeId === nodeId) {
+      const fallback = workspace.nodes.find((item) => item.id !== nodeId && item.type !== 'start' && item.type !== 'end') || workspace.nodes.find((item) => item.id === startNodeId)
+      setSelectedNodeId(fallback?.id || startNodeId)
+    }
+  }
+
+  const saveWorkspaceLocally = () => {
+    setSaveNotice(saveStoredWorkspace(workspace) ? 'Saved locally' : 'Local save failed')
   }
 
   const importFile = async (file: File): Promise<ImportResult> => {
@@ -1155,10 +1203,15 @@ export function App() {
               <Plus size={16} />
               Import
             </button>
-            <button className="secondary-button" onClick={() => downloadText('context-workspace.json', JSON.stringify(workspace, null, 2), 'application/json')}>
-              <Save size={16} />
-              Workspace
+            <button className="secondary-button" onClick={saveWorkspaceLocally}>
+              <HardDrive size={16} />
+              Save local
             </button>
+            <button className="secondary-button" onClick={() => downloadText('context-workspace.json', JSON.stringify(workspace, null, 2), 'application/json')}>
+              <Download size={16} />
+              Export workspace
+            </button>
+            <span className="save-status">{saveNotice}</span>
             <select className="toolbar-select" value={outputFormat} onChange={(event) => setOutputFormat(event.target.value as OutputFormat)} aria-label="Bundle output format">
               <option value="md">md</option>
               <option value="txt">txt</option>
@@ -1181,17 +1234,21 @@ export function App() {
             </div>
             <div className="source-list">
               {workspace.nodes.filter((node) => node.type !== 'start' && node.type !== 'end').map((node) => (
-                <button
-                  key={node.id}
-                  className={selectedNodeId === node.id ? 'source-item active' : 'source-item'}
-                  onClick={() => {
-                    setSelectedNodeId(node.id)
-                    setActiveDocumentId(node.type === 'document' ? node.id : null)
-                  }}
-                >
-                  <span className="node-icon">{nodeIcon(node.type)}</span>
-                  <span>{node.title}</span>
-                </button>
+                <div key={node.id} className={selectedNodeId === node.id ? 'source-row active' : 'source-row'}>
+                  <button
+                    className="source-item"
+                    onClick={() => {
+                      setSelectedNodeId(node.id)
+                      setActiveDocumentId(node.type === 'document' ? node.id : null)
+                    }}
+                  >
+                    <span className="node-icon">{nodeIcon(node.type)}</span>
+                    <span>{node.title}</span>
+                  </button>
+                  <button className="source-delete" onClick={() => deleteSource(node.id)} aria-label={`Delete ${node.title}`}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               ))}
             </div>
             <div className="rail-callout">

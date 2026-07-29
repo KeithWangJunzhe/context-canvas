@@ -145,6 +145,12 @@ button {
   font: inherit;
 }
 
+.save-status {
+  color: #69727d;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .workbench {
   min-height: 0;
   display: grid;
@@ -182,23 +188,59 @@ button {
   overflow: auto;
 }
 
-.source-item {
+.source-row {
   width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 30px;
+  align-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 7px;
+}
+
+.source-row.active {
+  background: #eaf1ff;
+  border-color: #b8cff8;
+}
+
+.source-row:hover {
+  border-color: #cfd6dd;
+}
+
+.source-item {
+  min-width: 0;
   display: grid;
   grid-template-columns: 22px 1fr;
   align-items: center;
   text-align: left;
-  border: 1px solid transparent;
+  border: 0;
   background: transparent;
-  border-radius: 7px;
   padding: 8px;
   color: #35404a;
 }
 
-.source-item.active {
-  background: #eaf1ff;
-  border-color: #b8cff8;
+.source-item span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-row.active .source-item {
   color: #173d7a;
+}
+
+.source-delete {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #87919c;
+  padding: 0;
+}
+
+.source-delete:hover {
+  color: #b42318;
+  background: #fff0f0;
 }
 
 .rail-callout {

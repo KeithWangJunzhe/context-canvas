@@ -168,6 +168,9 @@ Current implementation:
 - New imports auto-connect as `Start -> source -> End`.
 - `End` has export controls for `md`, `txt`, and `json`. The top toolbar Bundle button shares the same selected output format.
 - `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
+- 2026-07-29 update: source nodes can be deleted from the left rail. Deleting a source removes its related edges and exits any active document reader for that source.
+- Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions.
+- `localStorage` is a PoC persistence layer for text, blocks, edges, and annotations. It is not the long-term image persistence layer because object URLs do not survive refresh reliably; image Blob persistence should move to IndexedDB later.
 
 ### Image Annotation
 
@@ -214,10 +217,7 @@ Figma setup:
 - Repeated identical text may highlight more than intended.
 - No delete annotation/block action yet.
 - No reason input in the floating menu yet; reason must be edited in the right inspector.
-- No import diagnostics beyond empty file warning.
-- No workspace load/import yet, only download/export.
 - Image upload uses object URLs; exported workspaces do not preserve image file bytes.
-- Bundle JSON export is in PRD but not fully implemented as a separate button.
 - Block inspector gets visually noisy with many generated annotations.
 
 ## Next Good Tasks
@@ -227,7 +227,8 @@ Short-term:
 - Add delete/remove for blocks and annotations.
 - Add quick reason editing after floating annotation.
 - Add a clearer distinction between source blocks and generated in-text annotations in the inspector.
-- Add save/load workspace JSON.
+- Add explicit reset/clear local workspace.
+- Add workspace JSON import/restore.
 - Add copy-to-clipboard for current bundle draft.
 
 Medium-term:
