@@ -27,9 +27,12 @@ export interface ContextBlock {
 export interface ImageRegion {
   id: string
   nodeId: string
+  kind?: 'bbox' | 'text'
   box: [number, number, number, number]
   label: string
   note: string
+  color?: string
+  fontFamily?: string
   status: BlockStatus
   tags: BlockTag[]
 }

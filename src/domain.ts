@@ -159,7 +159,13 @@ export function generateBundleMarkdown(workspace: Workspace) {
   }
 
   const addRegion = (node: ContextNode, region: ImageRegion) => {
-    const line = `- ${node.imageName || node.title} region [${region.box.join(', ')}]: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
+    const details = [
+      region.kind ? `type=${region.kind}` : '',
+      region.color ? `color=${region.color}` : '',
+      region.fontFamily ? `font=${region.fontFamily}` : '',
+    ].filter(Boolean)
+    const detailText = details.length > 0 ? ` (${details.join(', ')})` : ''
+    const line = `- ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
     if (region.status === 'excluded') excluded.push(line)
     else imageRegions.push(line)
   }

@@ -169,15 +169,19 @@ Current implementation:
 - `End` has export controls for `md`, `txt`, and `json`. The top toolbar Bundle button shares the same selected output format.
 - `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
 - 2026-07-29 update: source nodes can be deleted from the left rail. Deleting a source removes its related edges and exits any active document reader for that source.
-- Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions.
+- Workspace state autosaves to `localStorage` under `context-canvas.workspace.v1`. The toolbar also has explicit `Save local` and `Export workspace` actions. Manual local saves show a short success/failure toast.
 - `localStorage` is a PoC persistence layer for text, blocks, edges, and annotations. It is not the long-term image persistence layer because object URLs do not survive refresh reliably; image Blob persistence should move to IndexedDB later.
 
 ### Image Annotation
 
-- Image nodes can be created by file import.
-- Image inspector supports drag-to-create bounding boxes.
-- Region metadata supports label, note, status, and tags.
-- This is still early and not the current focus.
+- Image nodes can be created by importing `.png`, `.jpeg`, and `.jpg` files.
+- Image inspector supports two annotation tools:
+  - bounding boxes by dragging on the image
+  - text boxes by clicking or dragging on the image
+- The image toolbar has five preset annotation colors and five text font choices.
+- Region metadata supports kind, box, color, font, label, note, status, and tags.
+- Image annotations are included in bundle output with type/color/font metadata.
+- Image file bytes are still not persisted across refresh; current image previews use object URLs.
 
 ## Key Product Decisions
 

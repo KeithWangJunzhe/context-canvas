@@ -151,6 +151,39 @@ button {
   white-space: nowrap;
 }
 
+.save-toast {
+  position: fixed;
+  top: 70px;
+  right: 22px;
+  z-index: 70;
+  border: 1px solid #70ba83;
+  border-radius: 8px;
+  background: #e9f8ed;
+  color: #245c34;
+  box-shadow: 0 14px 32px rgba(31, 43, 55, 0.16);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 650;
+  animation: toast-in 180ms ease-out;
+}
+
+.save-toast.is-error {
+  border-color: #df8a8a;
+  background: #fff0f0;
+  color: #8a2b2b;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .workbench {
   min-height: 0;
   display: grid;
@@ -499,6 +532,63 @@ button {
   font-size: 12px;
 }
 
+.image-tool-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.segmented.compact {
+  margin: 0;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.segmented.compact button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px;
+  font-size: 12px;
+}
+
+.swatch-row,
+.region-style-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px #cfd6dd;
+  padding: 0;
+}
+
+.swatch.active {
+  box-shadow: 0 0 0 2px #1f6feb;
+}
+
+.image-font-select {
+  grid-column: 1 / -1;
+  height: 30px;
+  border: 1px solid #cfd6dd;
+  border-radius: 7px;
+  background: #fff;
+  padding: 0 8px;
+  color: #1d2329;
+  font: inherit;
+  font-size: 12px;
+}
+
+.image-font-select:disabled {
+  opacity: 0.45;
+}
+
 .image-stage {
   position: relative;
   width: 100%;
@@ -518,19 +608,32 @@ button {
   display: block;
 }
 
-.bbox {
+.image-annotation {
   position: absolute;
   border: 2px solid #1f6feb;
   border-radius: 4px;
   pointer-events: none;
 }
 
-.bbox.draft {
+.image-annotation.draft {
   border-style: dashed;
   background: rgba(31, 111, 235, 0.12);
 }
 
-.bbox span {
+.image-annotation.text-box {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.image-annotation.text-box.draft {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.image-annotation span {
   position: absolute;
   left: -2px;
   top: -24px;
@@ -540,6 +643,14 @@ button {
   padding: 3px 6px;
   font-size: 11px;
   white-space: nowrap;
+}
+
+.image-annotation.text-box span {
+  position: static;
+  max-width: 100%;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hint {

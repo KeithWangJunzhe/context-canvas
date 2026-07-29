@@ -30,6 +30,7 @@ import {
   MessageSquareText,
   MousePointer2,
   NotebookPen,
+  Pilcrow,
   Play,
   Plus,
   Scissors,
@@ -54,6 +55,13 @@ const tagOptions: BlockTag[] = ['requirement', 'decision', 'question', 'assumpti
 type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
 type OutputFormat = 'md' | 'txt' | 'json'
+type ImageTool = 'bbox' | 'text'
+type ImageAnnotationDraft = {
+  kind: ImageTool
+  box: [number, number, number, number]
+  color: string
+  fontFamily?: string
+}
 type ContextFlowData = ContextNode & {
   outputFormat?: OutputFormat
   onOutputFormatChange?: (format: OutputFormat) => void
@@ -65,6 +73,8 @@ const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessi
 const startNodeId = 'node_start'
 const endNodeId = 'node_end'
 const localWorkspaceKey = 'context-canvas.workspace.v1'
+const imageAnnotationColors = ['#1f6feb', '#d1242f', '#2da44e', '#bf8700', '#8250df']
+const imageTextFonts = ['Inter', 'Georgia', 'Menlo', 'Arial', 'Courier New']
 
 function createSystemNode(id: string, type: 'start' | 'end', title: string): ContextNode {
   const now = new Date().toISOString()
@@ -357,7 +367,7 @@ function ImportPanel({
             <label className="secondary-button file-picker">
               <ImageIcon size={16} />
               Add image
-              <input type="file" accept="image/*" onChange={onImage} />
+              <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" onChange={onImage} />
             </label>
           </div>
           <button
@@ -683,10 +693,13 @@ function ImageInspector({
   onAddRegion,
 }: {
   node: ContextNode
-  onAddRegion: (box: [number, number, number, number]) => void
+  onAddRegion: (annotation: ImageAnnotationDraft) => void
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null)
-  const [draftBox, setDraftBox] = useState<[number, number, number, number] | null>(null)
+  const [tool, setTool] = useState<ImageTool>('bbox')
+  const [color, setColor] = useState(imageAnnotationColors[0])
+  const [fontFamily, setFontFamily] = useState(imageTextFonts[0])
+  const [draft, setDraft] = useState<ImageAnnotationDraft | null>(null)
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
 
   const pointFromEvent = (event: PointerEvent<HTMLDivElement>) => {
@@ -703,7 +716,8 @@ function ImageInspector({
     if (!point) return
     event.currentTarget.setPointerCapture(event.pointerId)
     setStartPoint(point)
-    setDraftBox([point.x, point.y, 0, 0])
+    const defaultBox: [number, number, number, number] = tool === 'text' ? [point.x, point.y, 18, 8] : [point.x, point.y, 0, 0]
+    setDraft({ kind: tool, box: defaultBox, color, fontFamily: tool === 'text' ? fontFamily : undefined })
   }
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -714,19 +728,57 @@ function ImageInspector({
     const top = Math.min(startPoint.y, point.y)
     const width = Math.abs(point.x - startPoint.x)
     const height = Math.abs(point.y - startPoint.y)
-    setDraftBox([left, top, width, height])
+    if (tool === 'text') {
+      setDraft({ kind: 'text', box: [left, top, Math.max(18, width), Math.max(8, height)], color, fontFamily })
+    } else {
+      setDraft({ kind: 'bbox', box: [left, top, width, height], color })
+    }
   }
 
   const onPointerUp = () => {
-    if (draftBox && draftBox[2] > 2 && draftBox[3] > 2) {
-      onAddRegion(draftBox)
+    if (draft) {
+      if (draft.kind === 'text') {
+        onAddRegion(draft)
+      } else if (draft.box[2] > 2 && draft.box[3] > 2) {
+        onAddRegion(draft)
+      }
     }
-    setDraftBox(null)
+    setDraft(null)
     setStartPoint(null)
   }
 
   return (
     <div>
+      <div className="image-tool-panel">
+        <div className="segmented compact">
+          <button className={tool === 'bbox' ? 'active' : ''} onClick={() => setTool('bbox')}>
+            <BoxSelect size={14} />
+            Box
+          </button>
+          <button className={tool === 'text' ? 'active' : ''} onClick={() => setTool('text')}>
+            <Pilcrow size={14} />
+            Text
+          </button>
+        </div>
+        <div className="swatch-row" aria-label="Annotation color">
+          {imageAnnotationColors.map((item) => (
+            <button
+              key={item}
+              className={item === color ? 'swatch active' : 'swatch'}
+              style={{ backgroundColor: item }}
+              onClick={() => setColor(item)}
+              aria-label={`Use color ${item}`}
+            />
+          ))}
+        </div>
+        <select className="image-font-select" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)} disabled={tool !== 'text'}>
+          {imageTextFonts.map((font) => (
+            <option key={font} value={font}>
+              {font}
+            </option>
+          ))}
+        </select>
+      </div>
       <div
         className="image-stage"
         ref={stageRef}
@@ -739,34 +791,36 @@ function ImageInspector({
         {node.regions.map((region) => (
           <div
             key={region.id}
-            className={`bbox status-${region.status}`}
+            className={`image-annotation ${region.kind === 'text' ? 'text-box' : 'bbox'} status-${region.status}`}
             style={{
               left: `${region.box[0]}%`,
               top: `${region.box[1]}%`,
               width: `${region.box[2]}%`,
               height: `${region.box[3]}%`,
+              borderColor: region.color || imageAnnotationColors[0],
+              color: region.color || imageAnnotationColors[0],
+              fontFamily: region.fontFamily,
             }}
           >
-            <span>{region.label || 'region'}</span>
+            <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{region.label || (region.kind === 'text' ? 'Text' : 'region')}</span>
           </div>
         ))}
-        {draftBox && (
+        {draft && (
           <div
-            className="bbox draft"
+            className={`image-annotation ${draft.kind === 'text' ? 'text-box' : 'bbox'} draft`}
             style={{
-              left: `${draftBox[0]}%`,
-              top: `${draftBox[1]}%`,
-              width: `${draftBox[2]}%`,
-              height: `${draftBox[3]}%`,
+              left: `${draft.box[0]}%`,
+              top: `${draft.box[1]}%`,
+              width: `${draft.box[2]}%`,
+              height: `${draft.box[3]}%`,
+              borderColor: draft.color,
+              color: draft.color,
+              fontFamily: draft.fontFamily,
             }}
           />
         )}
       </div>
-      <button className="secondary-button wide" onClick={() => onAddRegion([18, 18, 34, 24])}>
-        <BoxSelect size={16} />
-        Add sample bbox
-      </button>
-      <p className="hint">Drag on the image to create a region, then label it below. The sample button is a fallback for quick testing.</p>
+      <p className="hint">{tool === 'bbox' ? 'Drag on the image to draw a bounding box.' : 'Click or drag on the image to place a text box.'}</p>
     </div>
   )
 }
@@ -782,8 +836,8 @@ function Inspector({
   node?: ContextNode
   onUpdateNode: (nodeId: string, patch: Partial<ContextNode>) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
-  onAddRegion: (nodeId: string, box: [number, number, number, number]) => void
-  onUpdateRegion: (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus }) => void
+  onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
+  onUpdateRegion: (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus; color?: string; fontFamily?: string }) => void
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
 }) {
   if (!node) {
@@ -805,7 +859,7 @@ function Inspector({
         <input value={node.title} onChange={(event) => onUpdateNode(node.id, { title: event.target.value })} />
       </div>
 
-      {node.type === 'image' && <ImageInspector node={node} onAddRegion={(box) => onAddRegion(node.id, box)} />}
+      {node.type === 'image' && <ImageInspector node={node} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />}
 
       {node.regions.length > 0 && (
         <section className="panel-section">
@@ -813,7 +867,7 @@ function Inspector({
           {node.regions.map((region) => (
             <div className={`block-card status-${region.status}`} key={region.id}>
               <div className="block-toolbar">
-                <span className="role-chip">bbox</span>
+                <span className="role-chip">{region.kind === 'text' ? 'text' : 'bbox'}</span>
                 <select value={region.status} onChange={(event) => onUpdateRegion(node.id, region.id, { status: event.target.value as BlockStatus })}>
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
@@ -822,6 +876,26 @@ function Inspector({
                   ))}
                 </select>
               </div>
+              <div className="region-style-row">
+                {imageAnnotationColors.map((item) => (
+                  <button
+                    key={item}
+                    className={item === (region.color || imageAnnotationColors[0]) ? 'swatch active' : 'swatch'}
+                    style={{ backgroundColor: item }}
+                    onClick={() => onUpdateRegion(node.id, region.id, { color: item })}
+                    aria-label={`Use color ${item}`}
+                  />
+                ))}
+              </div>
+              {region.kind === 'text' && (
+                <select value={region.fontFamily || imageTextFonts[0]} onChange={(event) => onUpdateRegion(node.id, region.id, { fontFamily: event.target.value })}>
+                  {imageTextFonts.map((font) => (
+                    <option key={font} value={font}>
+                      {font}
+                    </option>
+                  ))}
+                </select>
+              )}
               <input value={region.label} onChange={(event) => onUpdateRegion(node.id, region.id, { label: event.target.value })} placeholder="Label" />
               <textarea value={region.note} onChange={(event) => onUpdateRegion(node.id, region.id, { note: event.target.value })} placeholder="Region note" />
             </div>
@@ -931,6 +1005,7 @@ export function App() {
   const [bundleDraftEdited, setBundleDraftEdited] = useState(false)
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
   const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? 'Loaded local workspace' : 'Autosave ready'))
+  const [saveToast, setSaveToast] = useState('')
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
   const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
@@ -948,6 +1023,12 @@ export function App() {
   useEffect(() => {
     setSaveNotice(saveStoredWorkspace(workspace) ? 'Saved locally' : 'Local save failed')
   }, [workspace])
+
+  useEffect(() => {
+    if (!saveToast) return
+    const timeout = window.setTimeout(() => setSaveToast(''), 1800)
+    return () => window.clearTimeout(timeout)
+  }, [saveToast])
 
   useEffect(() => {
     setFlowNodes((current) =>
@@ -1014,12 +1095,14 @@ export function App() {
   }
 
   const saveWorkspaceLocally = () => {
-    setSaveNotice(saveStoredWorkspace(workspace) ? 'Saved locally' : 'Local save failed')
+    const ok = saveStoredWorkspace(workspace)
+    setSaveNotice(ok ? 'Saved locally' : 'Local save failed')
+    setSaveToast(ok ? 'Saved successfully' : 'Local save failed')
   }
 
   const importFile = async (file: File): Promise<ImportResult> => {
     setImportNotice('')
-    if (file.type.startsWith('image/')) {
+    if (/\.(png|jpe?g)$/i.test(file.name) || ['image/png', 'image/jpeg'].includes(file.type)) {
       addNode(createImageNode(sourceTitle(file.name), URL.createObjectURL(file), file.name))
       return { ok: true }
     }
@@ -1064,7 +1147,7 @@ export function App() {
       }
     }
 
-    const notice = `${file.name} is not a supported import type yet. Use markdown, txt, docx, or images.`
+    const notice = `${file.name} is not a supported import type yet. Use markdown, txt, docx, png, jpeg, or jpg.`
     setImportNotice(notice)
     return { ok: false, notice }
   }
@@ -1136,7 +1219,7 @@ export function App() {
     }))
   }
 
-  const onAddRegion = (nodeId: string, box: [number, number, number, number]) => {
+  const onAddRegion = (nodeId: string, annotation: ImageAnnotationDraft) => {
     updateWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) =>
@@ -1148,9 +1231,12 @@ export function App() {
                 {
                   id: createId('region'),
                   nodeId,
-                  box,
-                  label: 'New region',
+                  kind: annotation.kind,
+                  box: annotation.box,
+                  label: annotation.kind === 'text' ? 'Text note' : 'New region',
                   note: '',
+                  color: annotation.color,
+                  fontFamily: annotation.fontFamily,
                   status: 'included',
                   tags: ['ui'],
                 },
@@ -1161,7 +1247,7 @@ export function App() {
     }))
   }
 
-  const onUpdateRegion = (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus }) => {
+  const onUpdateRegion = (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus; color?: string; fontFamily?: string }) => {
     updateWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) =>
@@ -1184,11 +1270,12 @@ export function App() {
         }}
         onDrop={onDropFiles}
       >
+        {saveToast && <div className={saveToast.includes('failed') ? 'save-toast is-error' : 'save-toast'}>{saveToast}</div>}
         {isDraggingFile && (
           <div className="drop-overlay">
             <div>
               <FileText size={26} />
-              <strong>Drop markdown, text, docx, or image files</strong>
+              <strong>Drop markdown, text, docx, png, jpeg, or jpg files</strong>
               <span>Local files become canvas nodes immediately.</span>
             </div>
           </div>
