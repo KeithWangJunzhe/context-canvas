@@ -137,6 +137,13 @@ Lightweight loop:
 
 Do not over-process the project too early. The product is still interaction-led.
 
+Use `docs/ROADMAP.md` as the current phase guide:
+
+- Phase 1: personal usable context bundle builder.
+- Phase 1.5: paste-first messy chat intake.
+- Phase 2: interaction polish.
+- Phase 3: assisted context and intent operations.
+
 ## 5. Near-term Non-code Setup
 
 Good next setup tasks:
