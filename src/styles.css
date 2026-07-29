@@ -690,12 +690,13 @@ button:disabled {
   position: absolute;
   border: 2px solid #1f6feb;
   border-radius: 4px;
+  background: transparent;
   pointer-events: none;
 }
 
 .image-annotation.draft {
   border-style: dashed;
-  background: rgba(31, 111, 235, 0.12);
+  background: transparent;
 }
 
 .image-annotation.text-box {
