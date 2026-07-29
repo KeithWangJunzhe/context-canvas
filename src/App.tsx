@@ -33,6 +33,7 @@ import {
   Scissors,
   Sparkles,
 } from 'lucide-react'
+import mammoth from 'mammoth/mammoth.browser'
 import {
   createId,
   createImageNode,
@@ -49,6 +50,38 @@ const statusOptions: BlockStatus[] = ['included', 'excluded', 'pinned', 'needs_r
 const tagOptions: BlockTag[] = ['requirement', 'decision', 'question', 'assumption', 'evidence', 'noise', 'bug', 'ui']
 type ContextFlowNode = Node<ContextNode>
 type TextImportType = 'chat' | 'document' | 'note'
+type ImportResult = { ok: boolean; notice?: string }
+
+const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+function sourceTitle(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, '') || 'Imported source'
+}
+
+function isTextSourceFile(file: File) {
+  return /\.(md|markdown|txt)$/i.test(file.name) || /^text\//.test(file.type)
+}
+
+function isDocxFile(file: File) {
+  return /\.docx$/i.test(file.name) || file.type === docxMimeType
+}
+
+function formatMammothMessages(messages: Array<{ type?: string; message?: string }>) {
+  const readableMessages = messages
+    .map((message) => message.message?.trim())
+    .filter((message): message is string => Boolean(message))
+  if (readableMessages.length === 0) return ''
+  return ` Mammoth reported: ${readableMessages.slice(0, 2).join(' ')}`
+}
+
+async function extractDocxText(file: File) {
+  const arrayBuffer = await file.arrayBuffer()
+  const result = await mammoth.extractRawText({ arrayBuffer })
+  return {
+    text: result.value.replace(/\r\n/g, '\n').trim(),
+    messages: result.messages,
+  }
+}
 
 function addTag(tags: BlockTag[], tag: BlockTag) {
   return tags.includes(tag) ? tags : [...tags, tag]
@@ -119,31 +152,35 @@ function makeFlowEdges(workspace: Workspace): Edge[] {
 function ImportPanel({
   onClose,
   onAddText,
-  onAddImage,
+  onImportFile,
 }: {
   onClose: () => void
   onAddText: (type: TextImportType, title: string, body: string) => void
-  onAddImage: (title: string, url: string, fileName: string) => void
+  onImportFile: (file: File) => Promise<ImportResult>
 }) {
   const [type, setType] = useState<TextImportType>('chat')
   const [title, setTitle] = useState('Imported source')
   const [body, setBody] = useState('')
+  const [fileNotice, setFileNotice] = useState('')
 
-  const onImage = (event: ChangeEvent<HTMLInputElement>) => {
+  const onImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    onAddImage(file.name.replace(/\.[^.]+$/, ''), url, file.name)
-    onClose()
+    setFileNotice('')
+    const result = await onImportFile(file)
+    event.target.value = ''
+    if (!result.ok && result.notice) setFileNotice(result.notice)
+    if (result.ok) onClose()
   }
 
-  const onTextFile = async (event: ChangeEvent<HTMLInputElement>) => {
+  const onSourceFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    const text = await file.text()
-    const inferredType: TextImportType = /\.(md|markdown)$/i.test(file.name) ? 'document' : type
-    onAddText(inferredType, file.name.replace(/\.[^.]+$/, ''), text)
-    onClose()
+    setFileNotice('')
+    const result = await onImportFile(file)
+    event.target.value = ''
+    if (!result.ok && result.notice) setFileNotice(result.notice)
+    if (result.ok) onClose()
   }
 
   return (
@@ -152,7 +189,7 @@ function ImportPanel({
         <div className="modal-header">
           <div>
             <h2>Import Context</h2>
-            <p>Paste text, choose a local markdown/plain-text file, or add a screenshot.</p>
+            <p>Paste text, choose a local markdown/plain-text/docx file, or add a screenshot.</p>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Close import panel">
             x
@@ -190,8 +227,8 @@ function ImportPanel({
           <div className="import-file-actions">
             <label className="secondary-button file-picker">
               <FileText size={16} />
-              Add md/txt
-              <input type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={onTextFile} />
+              Add document
+              <input type="file" accept=".md,.markdown,.txt,.docx,text/markdown,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={onSourceFile} />
             </label>
             <label className="secondary-button file-picker">
               <ImageIcon size={16} />
@@ -211,6 +248,7 @@ function ImportPanel({
             Slice into blocks
           </button>
         </div>
+        {fileNotice && <div className="import-inline-warning">{fileNotice}</div>}
       </div>
     </div>
   )
@@ -314,7 +352,7 @@ function MarkdownPreview({
           <div className="md-empty">
             <FileText size={22} />
             <h4>No readable text was imported</h4>
-            <p>The file node was created, but the browser did not provide markdown/plain-text content. Try the Import button and choose Add md/txt, or paste the document text directly.</p>
+            <p>The file node was created, but no readable document text came through. Try importing again, or paste the document text directly.</p>
           </div>
         )}
         {previewBlocks.map((block) => (
@@ -362,7 +400,7 @@ function DocumentWorkspace({
             text,
             status,
             tags: status === 'pinned' ? ['requirement'] : status === 'excluded' ? ['noise'] : ['evidence'],
-            reason: 'Selected from local markdown preview.',
+            reason: 'Selected from local document preview.',
             isGenerated: true,
           })
         }
@@ -760,55 +798,84 @@ export function App() {
     if (!bundleDraftEdited) setBundleDraft(bundle)
   }, [bundle, bundleDraftEdited])
 
-  const syncFlowData = useCallback((nextWorkspace: Workspace) => {
+  useEffect(() => {
     setFlowNodes((current) =>
-      current
-        .filter((node) => nextWorkspace.nodes.some((item) => item.id === node.id))
-        .map((node) => ({
-          ...node,
-          data: nextWorkspace.nodes.find((item) => item.id === node.id)!,
-        })),
+      workspace.nodes.map((contextNode, index) => {
+        const existing = current.find((node) => node.id === contextNode.id)
+        if (existing) return { ...existing, data: contextNode }
+        return {
+          id: contextNode.id,
+          type: 'context',
+          position: { x: 140 + index * 42, y: 140 + index * 28 },
+          data: contextNode,
+        }
+      }),
     )
-    setFlowEdges(makeFlowEdges(nextWorkspace))
-  }, [])
+    setFlowEdges(makeFlowEdges(workspace))
+  }, [workspace])
 
   const updateWorkspace = (updater: (workspace: Workspace) => Workspace) => {
     setWorkspace((current) => {
-      const next = { ...updater(current), updatedAt: new Date().toISOString() }
-      syncFlowData(next)
-      return next
+      return { ...updater(current), updatedAt: new Date().toISOString() }
     })
   }
 
   const addNode = (node: ContextNode) => {
     updateWorkspace((current) => ({ ...current, nodes: [...current.nodes, node] }))
-    setFlowNodes((current) => [
-      ...current,
-      {
-        id: node.id,
-        type: 'context',
-        position: { x: 140 + current.length * 42, y: 140 + current.length * 28 },
-        data: node,
-      },
-    ])
     setSelectedNodeId(node.id)
     setActiveDocumentId(node.type === 'document' ? node.id : null)
   }
 
-  const importFile = async (file: File) => {
+  const importFile = async (file: File): Promise<ImportResult> => {
     setImportNotice('')
     if (file.type.startsWith('image/')) {
-      addNode(createImageNode(file.name.replace(/\.[^.]+$/, ''), URL.createObjectURL(file), file.name))
-      return
+      addNode(createImageNode(sourceTitle(file.name), URL.createObjectURL(file), file.name))
+      return { ok: true }
     }
 
-    if (/\.(md|markdown|txt)$/i.test(file.name) || /^text\//.test(file.type)) {
-      const text = await file.text()
-      if (!text.trim()) {
-        setImportNotice(`${file.name} was added, but no readable text came through. The original file was not changed.`)
+    if (isDocxFile(file)) {
+      try {
+        const { text, messages } = await extractDocxText(file)
+        const messageNote = formatMammothMessages(messages)
+        if (!text) {
+          const notice = `${file.name} was added, but the docx parser did not find readable body text.${messageNote} The original file was not changed.`
+          setImportNotice(notice)
+          addNode(createTextNode('document', sourceTitle(file.name), ''))
+          return { ok: true, notice }
+        }
+        if (messageNote) setImportNotice(`${file.name} imported with parser notes.${messageNote}`)
+        addNode(createTextNode('document', sourceTitle(file.name), text))
+        return { ok: true }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'Unknown parser error.'
+        const notice = `${file.name} could not be imported as .docx: ${detail} The original file was not changed.`
+        setImportNotice(notice)
+        return { ok: false, notice }
       }
-      addNode(createTextNode('document', file.name.replace(/\.[^.]+$/, ''), text))
     }
+
+    if (isTextSourceFile(file)) {
+      try {
+        const text = await file.text()
+        if (!text.trim()) {
+          const notice = `${file.name} was added, but no readable text came through. The original file was not changed.`
+          setImportNotice(notice)
+          addNode(createTextNode('document', sourceTitle(file.name), text))
+          return { ok: true, notice }
+        }
+        addNode(createTextNode('document', sourceTitle(file.name), text))
+        return { ok: true }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'Unknown text read error.'
+        const notice = `${file.name} could not be read as text: ${detail} The original file was not changed.`
+        setImportNotice(notice)
+        return { ok: false, notice }
+      }
+    }
+
+    const notice = `${file.name} is not a supported import type yet. Use markdown, txt, docx, or images.`
+    setImportNotice(notice)
+    return { ok: false, notice }
   }
 
   const onDropFiles = async (event: DragEvent<HTMLDivElement>) => {
@@ -930,7 +997,7 @@ export function App() {
           <div className="drop-overlay">
             <div>
               <FileText size={26} />
-              <strong>Drop markdown, text, or image files</strong>
+              <strong>Drop markdown, text, docx, or image files</strong>
               <span>Local files become canvas nodes immediately.</span>
             </div>
           </div>
@@ -1038,7 +1105,7 @@ export function App() {
           <ImportPanel
             onClose={() => setShowImport(false)}
             onAddText={(type, title, body) => addNode(createTextNode(type, title, body))}
-            onAddImage={(title, url, fileName) => addNode(createImageNode(title, url, fileName))}
+            onImportFile={importFile}
           />
         )}
       </div>

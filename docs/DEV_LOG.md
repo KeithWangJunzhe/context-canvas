@@ -44,16 +44,35 @@ PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/
 PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/vite build
 ```
 
+Latest validation:
+
+- 2026-07-28: `PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH pnpm run build` passed. Vite emitted the expected large-chunk warning after adding Mammoth.
+
 Do not auto-start the dev server unless the user asks. The user wants to trigger testing.
 
 ## Implemented Features
 
-### Local Markdown / Text Import
+### Local Markdown / Text / Docx Import
 
-- Drag-and-drop `.md`, `.markdown`, `.txt`, and image files into the app.
-- Import modal also supports `Add md/txt` and `Add image`.
+- Drag-and-drop `.md`, `.markdown`, `.txt`, `.docx`, and image files into the app.
+- Import modal also supports `Add document` and `Add image`.
 - Local files are read by the browser into app state. The original file is not modified, deleted, or written back.
-- Empty markdown files show an explicit empty state instead of silently creating a confusing blank preview.
+- Empty markdown/text/docx imports show diagnostics instead of silently creating a confusing blank preview.
+
+Docx implementation notes:
+
+- Added `mammoth@1.12.0` as the client-side `.docx` text extractor.
+- The app uses `mammoth.extractRawText({ arrayBuffer })`, so the `.docx` file remains local and read-only.
+- Extracted `.docx` text becomes a regular document node; document bundle behavior is unchanged, so successfully imported `.docx` documents default to full include.
+- Import diagnostics are shown in the source rail when `.docx` parsing fails, when Mammoth returns parser messages, or when parsing succeeds but no readable text is extracted.
+- `src/mammoth-browser.d.ts` declares the browser bundle import because Mammoth's package types cover the main module but not the `mammoth/mammoth.browser` entry.
+- 2026-07-29 button import fix: the Import modal file buttons now share the same importer as drag/drop, clear their file input after each selection, and show inline failure diagnostics. Workspace-to-canvas synchronization was moved out of nested state updates into an effect so modal-based imports reliably appear in the source rail, document reader, and canvas node data.
+
+Current docx limitations:
+
+- Text extraction is raw text only. Formatting, comments, tracked changes semantics, tables, headers/footers, footnotes, and images are not modeled as separate blocks.
+- Password-protected, corrupt, old `.doc`, or heavily embedded documents may fail or import empty.
+- Adding Mammoth increased the production JS bundle enough for Vite to warn about a chunk over 500 kB. This is acceptable for the local PoC, but a future production version should consider lazy-loading the docx parser.
 
 ### Markdown Reader
 

@@ -602,6 +602,17 @@ button {
   justify-content: space-between;
 }
 
+.import-inline-warning {
+  margin-top: 12px;
+  border: 1px solid #dfb36a;
+  border-radius: 7px;
+  background: #fff6e6;
+  color: #72501d;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 10px;
+}
+
 .import-file-actions {
   display: flex;
   align-items: center;
