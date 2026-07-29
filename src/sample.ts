@@ -8,6 +8,15 @@ export const sampleWorkspace: Workspace = {
   updatedAt: now,
   nodes: [
     {
+      id: 'node_start',
+      type: 'start',
+      title: 'Start',
+      createdAt: now,
+      updatedAt: now,
+      regions: [],
+      blocks: [],
+    },
+    {
       id: 'node_chat_idea',
       type: 'chat',
       title: 'Messy project chat',
@@ -49,9 +58,9 @@ export const sampleWorkspace: Workspace = {
       ],
     },
     {
-      id: 'node_bundle_main',
-      type: 'bundle',
-      title: 'PoC bundle',
+      id: 'node_end',
+      type: 'end',
+      title: 'End',
       createdAt: now,
       updatedAt: now,
       regions: [],
@@ -60,11 +69,17 @@ export const sampleWorkspace: Workspace = {
   ],
   edges: [
     {
+      id: 'edge_start_chat',
+      from: 'node_start',
+      to: 'node_chat_idea',
+      label: 'input',
+    },
+    {
       id: 'edge_chat_bundle',
       from: 'node_chat_idea',
-      to: 'node_bundle_main',
+      to: 'node_end',
       label: 'feeds',
     },
   ],
-  activeBundleId: 'node_bundle_main',
+  activeBundleId: 'node_end',
 }

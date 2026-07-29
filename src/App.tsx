@@ -23,11 +23,13 @@ import {
   BoxSelect,
   Download,
   FileText,
+  Flag,
   Image as ImageIcon,
   Link,
   MessageSquareText,
   MousePointer2,
   NotebookPen,
+  Play,
   Plus,
   Save,
   Scissors,
@@ -48,11 +50,53 @@ import { BlockStatus, BlockTag, ContextBlock, ContextNode, Workspace } from './t
 
 const statusOptions: BlockStatus[] = ['included', 'excluded', 'pinned', 'needs_review']
 const tagOptions: BlockTag[] = ['requirement', 'decision', 'question', 'assumption', 'evidence', 'noise', 'bug', 'ui']
-type ContextFlowNode = Node<ContextNode>
 type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
+type OutputFormat = 'md' | 'txt' | 'json'
+type ContextFlowData = ContextNode & {
+  outputFormat?: OutputFormat
+  onOutputFormatChange?: (format: OutputFormat) => void
+  onDownloadBundle?: () => void
+}
+type ContextFlowNode = Node<ContextFlowData>
 
 const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const startNodeId = 'node_start'
+const endNodeId = 'node_end'
+
+function createSystemNode(id: string, type: 'start' | 'end', title: string): ContextNode {
+  const now = new Date().toISOString()
+  return {
+    id,
+    type,
+    title,
+    createdAt: now,
+    updatedAt: now,
+    regions: [],
+    blocks: [],
+  }
+}
+
+function withSystemNodes(workspace: Workspace): Workspace {
+  const legacyBundleIds = workspace.nodes.filter((node) => node.type === 'bundle').map((node) => node.id)
+  const nodes = workspace.nodes.map((node) => (node.type === 'bundle' ? { ...node, id: endNodeId, type: 'end' as const, title: 'End' } : node))
+  const hasStart = nodes.some((node) => node.id === startNodeId || node.type === 'start')
+  const hasEnd = nodes.some((node) => node.id === endNodeId || node.type === 'end')
+  return {
+    ...workspace,
+    nodes: [
+      ...(hasStart ? [] : [createSystemNode(startNodeId, 'start', 'Start')]),
+      ...nodes,
+      ...(hasEnd ? [] : [createSystemNode(endNodeId, 'end', 'End')]),
+    ],
+    edges: workspace.edges.map((edge) => ({
+      ...edge,
+      from: legacyBundleIds.includes(edge.from) ? endNodeId : edge.from,
+      to: legacyBundleIds.includes(edge.to) ? endNodeId : edge.to,
+    })),
+    activeBundleId: endNodeId,
+  }
+}
 
 function sourceTitle(fileName: string) {
   return fileName.replace(/\.[^.]+$/, '') || 'Imported source'
@@ -83,11 +127,39 @@ async function extractDocxText(file: File) {
   }
 }
 
+function bundleDownload(format: OutputFormat, markdown: string, workspace: Workspace) {
+  if (format === 'json') {
+    return {
+      filename: 'context-bundle.json',
+      mime: 'application/json',
+      content: JSON.stringify(
+        {
+          generatedFrom: workspace.title,
+          updatedAt: new Date().toISOString(),
+          format,
+          markdown,
+          workspace,
+        },
+        null,
+        2,
+      ),
+    }
+  }
+
+  return {
+    filename: format === 'md' ? 'context-bundle.md' : 'context-bundle.txt',
+    mime: format === 'md' ? 'text/markdown' : 'text/plain',
+    content: markdown,
+  }
+}
+
 function addTag(tags: BlockTag[], tag: BlockTag) {
   return tags.includes(tag) ? tags : [...tags, tag]
 }
 
 function nodeIcon(type: ContextNode['type']) {
+  if (type === 'start') return <Play size={16} />
+  if (type === 'end') return <Flag size={16} />
   if (type === 'chat') return <MessageSquareText size={16} />
   if (type === 'image') return <ImageIcon size={16} />
   if (type === 'note') return <NotebookPen size={16} />
@@ -100,11 +172,13 @@ function countByStatus(node: ContextNode, status: BlockStatus) {
 }
 
 function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
-  const contextNode = data as ContextNode
+  const contextNode = data as ContextFlowData
   const total = contextNode.blocks.length + contextNode.regions.length
+  const isStart = contextNode.type === 'start'
+  const isEnd = contextNode.type === 'end'
   return (
     <div className={`canvas-node ${selected ? 'is-selected' : ''} node-${contextNode.type}`}>
-      <Handle type="target" position={Position.Left} />
+      {!isStart && <Handle type="target" position={Position.Left} />}
       <div className="node-header">
         <span className="node-icon">{nodeIcon(contextNode.type)}</span>
         <span className="node-title">{contextNode.title}</span>
@@ -113,7 +187,7 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
         <span>{contextNode.type}</span>
         <span>{total} blocks</span>
       </div>
-      {contextNode.type !== 'bundle' && (
+      {!isStart && !isEnd && contextNode.type !== 'bundle' && (
         <div className="status-strip">
           <span className="pill pinned">{countByStatus(contextNode, 'pinned')} pin</span>
           <span className="pill included">{countByStatus(contextNode, 'included')} in</span>
@@ -122,7 +196,24 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
         </div>
       )}
       {contextNode.type === 'bundle' && <div className="bundle-note">Exports active context</div>}
-      <Handle type="source" position={Position.Right} />
+      {isStart && <div className="bundle-note">Import or connect sources from here.</div>}
+      {isEnd && (
+        <div className="end-node-controls nodrag nopan">
+          <select
+            value={contextNode.outputFormat || 'md'}
+            onChange={(event) => contextNode.onOutputFormatChange?.(event.target.value as OutputFormat)}
+          >
+            <option value="md">Markdown</option>
+            <option value="txt">Text</option>
+            <option value="json">JSON</option>
+          </select>
+          <button onClick={() => contextNode.onDownloadBundle?.()}>
+            <Download size={14} />
+            Export
+          </button>
+        </div>
+      )}
+      {!isEnd && <Handle type="source" position={Position.Right} />}
     </div>
   )
 }
@@ -130,12 +221,21 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
 const nodeTypes = { context: ContextNodeCard }
 
 function makeFlowNodes(workspace: Workspace): ContextFlowNode[] {
-  return workspace.nodes.map((node, index) => ({
-    id: node.id,
-    type: 'context',
-    position: { x: 90 + (index % 3) * 280, y: 120 + Math.floor(index / 3) * 190 },
-    data: node,
-  }))
+  return workspace.nodes.map((node, index) => {
+    const sourceIndex = workspace.nodes.filter((item) => item.type !== 'start' && item.type !== 'end').findIndex((item) => item.id === node.id)
+    const position =
+      node.type === 'start'
+        ? { x: 40, y: 260 }
+        : node.type === 'end'
+          ? { x: 900, y: 260 }
+          : { x: 300 + (sourceIndex % 2) * 280, y: 130 + Math.floor(Math.max(sourceIndex, 0) / 2) * 190 }
+    return {
+      id: node.id,
+      type: 'context',
+      position,
+      data: node,
+    }
+  })
 }
 
 function makeFlowEdges(workspace: Workspace): Edge[] {
@@ -705,7 +805,15 @@ function Inspector({
         </section>
       )}
 
-      {node.type !== 'image' && node.type !== 'bundle' && (
+      {node.type === 'start' && (
+        <div className="empty-state">
+          <Play size={22} />
+          <h2>Start Node</h2>
+          <p>This is the default entry point for source context. New imports connect from here automatically.</p>
+        </div>
+      )}
+
+      {node.type !== 'start' && node.type !== 'end' && node.type !== 'image' && node.type !== 'bundle' && (
         <section className="panel-section">
           <h3>{node.type === 'document' ? 'Structured Blocks' : 'Blocks'}</h3>
           {node.type === 'document' && (
@@ -722,6 +830,14 @@ function Inspector({
           <Archive size={22} />
           <h2>Bundle Node</h2>
           <p>This node represents the current output package. Use the preview panel to inspect what Codex will see.</p>
+        </div>
+      )}
+
+      {node.type === 'end' && (
+        <div className="empty-state">
+          <Flag size={22} />
+          <h2>End Node</h2>
+          <p>This is the default output point. Use its canvas controls or the top Bundle button to export the current bundle.</p>
         </div>
       )}
     </aside>
@@ -778,9 +894,10 @@ function BundlePreview({
 }
 
 export function App() {
-  const [workspace, setWorkspace] = useState<Workspace>(sampleWorkspace)
-  const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(sampleWorkspace))
-  const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(sampleWorkspace))
+  const initialWorkspace = useMemo(() => withSystemNodes(sampleWorkspace), [])
+  const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace)
+  const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(initialWorkspace))
+  const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(initialWorkspace))
   const [selectedNodeId, setSelectedNodeId] = useState<string>('node_chat_idea')
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
@@ -788,11 +905,16 @@ export function App() {
   const [importNotice, setImportNotice] = useState('')
   const [bundleDraft, setBundleDraft] = useState('')
   const [bundleDraftEdited, setBundleDraftEdited] = useState(false)
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
   const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
   const bundleToDownload = bundleDraftEdited ? bundleDraft : bundle
+  const downloadBundle = useCallback(() => {
+    const payload = bundleDownload(outputFormat, bundleToDownload, workspace)
+    downloadText(payload.filename, payload.content, payload.mime)
+  }, [bundleToDownload, outputFormat, workspace])
 
   useEffect(() => {
     if (!bundleDraftEdited) setBundleDraft(bundle)
@@ -802,26 +924,47 @@ export function App() {
     setFlowNodes((current) =>
       workspace.nodes.map((contextNode, index) => {
         const existing = current.find((node) => node.id === contextNode.id)
-        if (existing) return { ...existing, data: contextNode }
+        const data =
+          contextNode.type === 'end'
+            ? {
+                ...contextNode,
+                outputFormat,
+                onOutputFormatChange: setOutputFormat,
+                onDownloadBundle: downloadBundle,
+              }
+            : contextNode
+        if (existing) return { ...existing, data }
         return {
           id: contextNode.id,
           type: 'context',
           position: { x: 140 + index * 42, y: 140 + index * 28 },
-          data: contextNode,
+          data,
         }
       }),
     )
     setFlowEdges(makeFlowEdges(workspace))
-  }, [workspace])
+  }, [downloadBundle, outputFormat, workspace])
 
   const updateWorkspace = (updater: (workspace: Workspace) => Workspace) => {
     setWorkspace((current) => {
-      return { ...updater(current), updatedAt: new Date().toISOString() }
+      return withSystemNodes({ ...updater(current), updatedAt: new Date().toISOString() })
     })
   }
 
   const addNode = (node: ContextNode) => {
-    updateWorkspace((current) => ({ ...current, nodes: [...current.nodes, node] }))
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: [...current.nodes, node],
+      edges: [
+        ...current.edges,
+        ...(current.nodes.some((item) => item.id === startNodeId)
+          ? [{ id: createId('edge'), from: startNodeId, to: node.id, label: 'input' }]
+          : []),
+        ...(current.nodes.some((item) => item.id === endNodeId)
+          ? [{ id: createId('edge'), from: node.id, to: endNodeId, label: 'feeds' }]
+          : []),
+      ],
+    }))
     setSelectedNodeId(node.id)
     setActiveDocumentId(node.type === 'document' ? node.id : null)
   }
@@ -1016,9 +1159,14 @@ export function App() {
               <Save size={16} />
               Workspace
             </button>
-            <button className="primary-button" onClick={() => downloadText('context-bundle.md', bundleToDownload, 'text/markdown')}>
+            <select className="toolbar-select" value={outputFormat} onChange={(event) => setOutputFormat(event.target.value as OutputFormat)} aria-label="Bundle output format">
+              <option value="md">md</option>
+              <option value="txt">txt</option>
+              <option value="json">json</option>
+            </select>
+            <button className="primary-button" onClick={downloadBundle}>
               <Download size={16} />
-              Bundle
+              Bundle .{outputFormat}
             </button>
           </div>
         </header>
@@ -1032,7 +1180,7 @@ export function App() {
               </button>
             </div>
             <div className="source-list">
-              {workspace.nodes.map((node) => (
+              {workspace.nodes.filter((node) => node.type !== 'start' && node.type !== 'end').map((node) => (
                 <button
                   key={node.id}
                   className={selectedNodeId === node.id ? 'source-item active' : 'source-item'}

@@ -135,6 +135,16 @@ button {
   margin-top: 10px;
 }
 
+.toolbar-select {
+  height: 32px;
+  border: 1px solid #cfd6dd;
+  border-radius: 7px;
+  background: #fff;
+  color: #1d2329;
+  padding: 0 8px;
+  font: inherit;
+}
+
 .workbench {
   min-height: 0;
   display: grid;
@@ -252,6 +262,16 @@ button {
   box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.12);
 }
 
+.canvas-node.node-start {
+  border-color: #7ab78d;
+  background: #f4fbf6;
+}
+
+.canvas-node.node-end {
+  border-color: #7fa7dc;
+  background: #f5f9ff;
+}
+
 .node-header {
   gap: 7px;
   margin-bottom: 9px;
@@ -323,6 +343,37 @@ button {
   background: #eef1f4;
   padding: 9px;
   border-radius: 7px;
+}
+
+.end-node-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.end-node-controls select,
+.end-node-controls button {
+  min-width: 0;
+  height: 30px;
+  border: 1px solid #cfd6dd;
+  border-radius: 7px;
+  background: #fff;
+  color: #1d2329;
+  font: inherit;
+  font-size: 12px;
+}
+
+.end-node-controls select {
+  padding: 0 6px;
+}
+
+.end-node-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: #1f6feb;
+  font-weight: 650;
 }
 
 .context-edge path {

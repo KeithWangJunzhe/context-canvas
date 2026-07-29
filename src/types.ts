@@ -1,4 +1,4 @@
-export type NodeType = 'document' | 'chat' | 'image' | 'note' | 'bundle'
+export type NodeType = 'start' | 'document' | 'chat' | 'image' | 'note' | 'bundle' | 'end'
 
 export type BlockStatus = 'included' | 'excluded' | 'pinned' | 'needs_review'
 

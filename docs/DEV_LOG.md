@@ -156,6 +156,7 @@ Bundle generation decision:
 Product decision:
 
 - The canvas is the main assembly surface. Opening a document reader is a focused editing mode, not a permanent replacement for the canvas.
+- The canvas should always expose the context assembly lifecycle: `Start` as the source entry point and `End` as the bundle/output point.
 
 Current implementation:
 
@@ -163,6 +164,10 @@ Current implementation:
 - `activeDocumentId` controls whether the center pane is showing the document reader.
 - Document editing has a `Save & Back` control. Edits are already autosaved into workspace state; the button exits focused reader mode and returns the center pane to the canvas.
 - The structured block editor remains in the right inspector for now, even though it will need a cleaner high-volume UI later.
+- 2026-07-29 update: `Start` and `End` are system nodes that are always normalized into the workspace. Older `bundle` nodes are treated as `End` for compatibility.
+- New imports auto-connect as `Start -> source -> End`.
+- `End` has export controls for `md`, `txt`, and `json`. The top toolbar Bundle button shares the same selected output format.
+- `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
 
 ### Image Annotation
 

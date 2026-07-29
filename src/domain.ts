@@ -165,7 +165,7 @@ export function generateBundleMarkdown(workspace: Workspace) {
   }
 
   workspace.nodes.forEach((node) => {
-    if (node.type === 'bundle') return
+    if (node.type === 'start' || node.type === 'end' || node.type === 'bundle') return
     if (node.type === 'document') {
       const body = node.body?.trim()
       const hasExcludedDocument = node.blocks.some((block) => block.status === 'excluded' && !block.isGenerated)
