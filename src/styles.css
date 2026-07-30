@@ -401,6 +401,18 @@ button:disabled {
   gap: 5px;
 }
 
+.node-mini-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 26px;
+  margin-top: 8px;
+  color: #46515c;
+  font-size: 12px;
+}
+
 .pill,
 .tag,
 .role-chip {
@@ -577,6 +589,12 @@ button:disabled {
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 10px;
+}
+
+.block-card.is-active {
+  border-color: #1f6feb;
+  box-shadow: inset 3px 0 0 #1f6feb;
+  background: #f5f9ff;
 }
 
 .block-toolbar {
@@ -1135,6 +1153,11 @@ button:disabled {
   position: relative;
   padding: 12px 12px 10px;
   border-bottom: 1px solid #eef1f4;
+}
+
+.md-block.is-active {
+  box-shadow: inset 3px 0 0 #1f6feb;
+  background: #f5f9ff;
 }
 
 .md-block:last-child {

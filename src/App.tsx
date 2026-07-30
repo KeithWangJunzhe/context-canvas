@@ -47,6 +47,7 @@ import {
   createTextNode,
   downloadText,
   generateBundleMarkdown,
+  sliceTextToBlocks,
   statusLabel,
   toggleTag,
 } from './domain'
@@ -70,6 +71,7 @@ type ContextFlowData = ContextNode & {
   outputFormat?: OutputFormat
   onOutputFormatChange?: (format: OutputFormat) => void
   onDownloadBundle?: () => void
+  onResliceNode?: (nodeId: string) => void
 }
 type ContextFlowNode = Node<ContextFlowData>
 
@@ -260,6 +262,18 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           <span className="pill needs_review">{countByStatus(contextNode, 'needs_review')} review</span>
         </div>
       )}
+      {['chat', 'document', 'note'].includes(contextNode.type) && typeof contextNode.body === 'string' && (
+        <button
+          className="node-mini-action nodrag nopan"
+          onClick={(event) => {
+            event.stopPropagation()
+            contextNode.onResliceNode?.(contextNode.id)
+          }}
+        >
+          <Scissors size={13} />
+          Slice
+        </button>
+      )}
       {contextNode.type === 'bundle' && <div className="bundle-note">Exports active context</div>}
       {isStart && <div className="bundle-note">Import or connect sources from here.</div>}
       {isEnd && (
@@ -425,12 +439,14 @@ function ImportPanel({
 
 function MarkdownPreview({
   node,
+  activeBlockId,
   onAddSelection,
   onUpdateBlock,
   onDeleteBlock,
   variant = 'panel',
 }: {
   node: ContextNode
+  activeBlockId?: string
   onAddSelection: (status: BlockStatus, text: string) => void
   onUpdateBlock: (blockId: string, patch: Partial<ContextBlock>) => void
   onDeleteBlock?: (blockId: string) => void
@@ -440,9 +456,18 @@ function MarkdownPreview({
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number } | null>(null)
   const fallbackBody = typeof node.body === 'string' ? node.body.trim() : ''
   const annotationBlocks = node.blocks.filter((block) => block.isGenerated && block.text?.trim())
+  const sourceBlocks = node.blocks
+    .filter((block) => !block.isGenerated)
+    .sort((first, second) => {
+      const firstOrder = first.sourceOrder ?? (first.text && node.body ? node.body.indexOf(first.text) : -1)
+      const secondOrder = second.sourceOrder ?? (second.text && node.body ? node.body.indexOf(second.text) : -1)
+      const normalizedFirst = firstOrder >= 0 ? firstOrder : Number.MAX_SAFE_INTEGER
+      const normalizedSecond = secondOrder >= 0 ? secondOrder : Number.MAX_SAFE_INTEGER
+      return normalizedFirst - normalizedSecond
+    })
   const previewBlocks =
-    node.blocks.filter((block) => !block.isGenerated).length > 0
-      ? node.blocks.filter((block) => !block.isGenerated)
+    sourceBlocks.length > 0
+      ? sourceBlocks
       : fallbackBody
         ? [
             {
@@ -530,6 +555,7 @@ function MarkdownPreview({
           <MarkdownBlock
             key={block.id}
             block={block}
+            isActive={activeBlockId === block.id}
             annotations={annotationBlocks}
             onUpdate={(patch) => {
               if (node.blocks.some((item) => item.id === block.id)) onUpdateBlock(block.id, patch)
@@ -545,19 +571,42 @@ function MarkdownPreview({
 
 function DocumentWorkspace({
   node,
+  activeBlockId,
+  onActiveBlockChange,
   onAddBlock,
   onUpdateBlock,
   onDeleteBlock,
   onExit,
 }: {
   node: ContextNode
+  activeBlockId?: string
+  onActiveBlockChange: (blockId: string) => void
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
   onDeleteBlock: (nodeId: string, blockId: string) => void
   onExit: () => void
 }) {
+  const workspaceRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const firstBlock = node.blocks.filter((block) => !block.isGenerated)[0]
+    if (firstBlock) onActiveBlockChange(firstBlock.id)
+  }, [node.id])
+
+  const syncActiveBlockFromScroll = () => {
+    const container = workspaceRef.current
+    if (!container) return
+    const blocks = Array.from(container.querySelectorAll<HTMLElement>('[data-preview-block-id]'))
+    if (blocks.length === 0) return
+    const topGuide = container.getBoundingClientRect().top + 120
+    const visibleBlocks = blocks.filter((block) => block.getBoundingClientRect().top <= topGuide)
+    const activeBlock = visibleBlocks[visibleBlocks.length - 1] || blocks[0]
+    const blockId = activeBlock.dataset.previewBlockId
+    if (blockId) onActiveBlockChange(blockId)
+  }
+
   return (
-    <div className="document-workspace">
+    <div className="document-workspace" ref={workspaceRef} onScroll={syncActiveBlockFromScroll}>
       <div className="document-workspace-bar">
         <button className="secondary-button" onClick={onExit}>
           <ArrowLeft size={16} />
@@ -567,6 +616,7 @@ function DocumentWorkspace({
       </div>
       <MarkdownPreview
         node={node}
+        activeBlockId={activeBlockId}
         variant="workspace"
         onAddSelection={(status, text) =>
           onAddBlock(node.id, {
@@ -618,11 +668,13 @@ function HighlightedText({ text, annotations }: { text: string; annotations: Con
 
 function MarkdownBlock({
   block,
+  isActive = false,
   annotations = [],
   onUpdate,
   onDelete,
 }: {
   block: ContextBlock
+  isActive?: boolean
   annotations?: ContextBlock[]
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete?: () => void
@@ -635,7 +687,7 @@ function MarkdownBlock({
   const isList = lines.every((line) => !line.trim() || /^(\s*[-*+]\s+|\s*\d+\.\s+)/.test(line))
 
   return (
-    <div className={`md-block status-${block.status}`}>
+    <div className={`md-block status-${block.status} ${isActive ? 'is-active' : ''}`} data-preview-block-id={block.id}>
       <div className="md-block-actions">
         <button
           className={block.status === 'pinned' ? 'active' : ''}
@@ -686,16 +738,18 @@ function MarkdownBlock({
 
 function BlockEditor({
   block,
+  isActive = false,
   onUpdate,
   onDelete,
 }: {
   block: ContextBlock
+  isActive?: boolean
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete: () => void
 }) {
   const setStatus = (status: BlockStatus) => onUpdate({ status: nextBlockStatus(block.status, status) })
   return (
-    <div className={`block-card status-${block.status}`}>
+    <div className={`block-card status-${block.status} ${isActive ? 'is-active' : ''}`} data-block-editor-id={block.id}>
       <div className="block-toolbar">
         {(block.speakerName || block.role) && <span className="role-chip">{block.speakerName || block.role}</span>}
         <select value={block.status} onChange={(event) => onUpdate({ status: event.target.value as BlockStatus })}>
@@ -921,6 +975,7 @@ function Inspector({
   edge,
   edgeFrom,
   edgeTo,
+  activeBlockId,
   onUpdateNode,
   onUpdateEdge,
   onDeleteEdge,
@@ -936,6 +991,7 @@ function Inspector({
   edge?: ContextEdge
   edgeFrom?: ContextNode
   edgeTo?: ContextNode
+  activeBlockId?: string
   onUpdateNode: (nodeId: string, patch: Partial<ContextNode>) => void
   onUpdateEdge: (edgeId: string, patch: Partial<ContextEdge>) => void
   onDeleteEdge: (edgeId: string) => void
@@ -948,6 +1004,13 @@ function Inspector({
   onOpenImageWorkspace: (nodeId: string) => void
 }) {
   const [blockFilter, setBlockFilter] = useState<BlockFilter>('all')
+  const inspectorRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!activeBlockId) return
+    const block = inspectorRef.current?.querySelector<HTMLElement>(`[data-block-editor-id="${activeBlockId}"]`)
+    block?.scrollIntoView({ block: 'nearest' })
+  }, [activeBlockId, blockFilter, node?.id])
 
   if (edge) {
     return (
@@ -1008,7 +1071,7 @@ function Inspector({
     : []
 
   return (
-    <aside className="inspector">
+    <aside className="inspector" ref={inspectorRef}>
       <div className="inspector-header">
         <span className="node-icon">{nodeIcon(node.type)}</span>
         <input value={node.title} onChange={(event) => onUpdateNode(node.id, { title: event.target.value })} />
@@ -1097,7 +1160,13 @@ function Inspector({
             <p className="hint">Preview and selection live in the center reader. This panel edits the structured blocks that feed the bundle.</p>
           )}
           {orderedBlocks.map((block) => (
-            <BlockEditor key={block.id} block={block} onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)} onDelete={() => onDeleteBlock(node.id, block.id)} />
+            <BlockEditor
+              key={block.id}
+              block={block}
+              isActive={activeBlockId === block.id}
+              onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)}
+              onDelete={() => onDeleteBlock(node.id, block.id)}
+            />
           ))}
           {orderedBlocks.length === 0 && <p className="hint">No blocks match this filter.</p>}
         </section>
@@ -1232,8 +1301,10 @@ export function App() {
   const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? 'Loaded local workspace' : 'Autosave ready'))
   const [saveToast, setSaveToast] = useState('')
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
   const historyPastRef = useRef<Workspace[]>([])
   const historyFutureRef = useRef<Workspace[]>([])
+  const resliceNodeRef = useRef<(nodeId: string) => void>(() => {})
 
   const selectedNode = workspace.nodes.find((node) => node.id === selectedNodeId)
   const selectedEdge = selectedEdgeId ? workspace.edges.find((edge) => edge.id === selectedEdgeId) : undefined
@@ -1284,11 +1355,15 @@ export function App() {
           contextNode.type === 'end'
             ? {
                 ...contextNode,
+                onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
                 outputFormat,
                 onOutputFormatChange: setOutputFormat,
                 onDownloadBundle: downloadBundle,
               }
-            : contextNode
+            : {
+                ...contextNode,
+                onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
+              }
         if (existing) return { ...existing, data }
         return {
           id: contextNode.id,
@@ -1335,6 +1410,7 @@ export function App() {
     }))
     setSelectedNodeId(node.id)
     setSelectedEdgeId(null)
+    setActiveBlockId(null)
     setActiveDocumentId(node.type === 'document' ? node.id : null)
     setActiveImageId(node.type === 'image' ? node.id : null)
   }
@@ -1369,6 +1445,7 @@ export function App() {
     setWorkspace(next)
     setSelectedNodeId(startNodeId)
     setSelectedEdgeId(null)
+    setActiveBlockId(null)
     setActiveDocumentId(null)
     setActiveImageId(null)
     setBundleDraft('')
@@ -1523,6 +1600,7 @@ export function App() {
         node.id === nodeId ? { ...node, updatedAt: new Date().toISOString(), blocks: node.blocks.filter((block) => block.id !== blockId) } : node,
       ),
     }))
+    if (activeBlockId === blockId) setActiveBlockId(null)
   }
 
   const onAddBlock = (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => {
@@ -1592,6 +1670,35 @@ export function App() {
       ),
     }))
   }
+
+  const resliceNode = (nodeId: string) => {
+    let nextCount = 0
+    const target = workspace.nodes.find((node) => node.id === nodeId)
+    if (!target || !['chat', 'document', 'note'].includes(target.type) || typeof target.body !== 'string' || !target.body.trim()) {
+      setSaveToast('Nothing to slice')
+      return
+    }
+
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) => {
+        if (node.id !== nodeId || !['chat', 'document', 'note'].includes(node.type) || typeof node.body !== 'string') return node
+        const mode = node.type === 'chat' ? 'chat' : node.type === 'note' ? 'note' : 'document'
+        const generatedBlocks = node.blocks.filter((block) => block.isGenerated)
+        const slicedBlocks = sliceTextToBlocks(node.body, node.id, mode)
+        nextCount = slicedBlocks.length
+        return {
+          ...node,
+          updatedAt: new Date().toISOString(),
+          blocks: [...slicedBlocks, ...generatedBlocks],
+        }
+      }),
+    }))
+    setActiveBlockId(null)
+    setSaveToast(`Re-sliced into ${nextCount} blocks`)
+  }
+
+  resliceNodeRef.current = resliceNode
 
   return (
     <ReactFlowProvider>
@@ -1674,6 +1781,7 @@ export function App() {
                     className="source-item"
                     onClick={() => {
                       setSelectedNodeId(node.id)
+                      setActiveBlockId(null)
                       setActiveDocumentId(node.type === 'document' ? node.id : null)
                       setActiveImageId(node.type === 'image' ? node.id : null)
                     }}
@@ -1696,7 +1804,15 @@ export function App() {
 
           <section className="canvas-pane">
             {activeDocument ? (
-              <DocumentWorkspace node={activeDocument} onAddBlock={onAddBlock} onUpdateBlock={onUpdateBlock} onDeleteBlock={onDeleteBlock} onExit={() => setActiveDocumentId(null)} />
+              <DocumentWorkspace
+                node={activeDocument}
+                activeBlockId={activeBlockId || undefined}
+                onActiveBlockChange={setActiveBlockId}
+                onAddBlock={onAddBlock}
+                onUpdateBlock={onUpdateBlock}
+                onDeleteBlock={onDeleteBlock}
+                onExit={() => setActiveDocumentId(null)}
+              />
             ) : activeImage ? (
               <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onExit={() => setActiveImageId(null)} />
             ) : (
@@ -1710,6 +1826,7 @@ export function App() {
                 onNodeClick={(_, node) => {
                   setSelectedNodeId(node.id)
                   setSelectedEdgeId(null)
+                  setActiveBlockId(null)
                   const contextNode = workspace.nodes.find((item) => item.id === node.id)
                   setActiveDocumentId(contextNode?.type === 'document' ? contextNode.id : null)
                   setActiveImageId(contextNode?.type === 'image' ? contextNode.id : null)
@@ -1734,6 +1851,7 @@ export function App() {
             edge={selectedEdge}
             edgeFrom={selectedEdgeFrom}
             edgeTo={selectedEdgeTo}
+            activeBlockId={activeBlockId || undefined}
             onUpdateNode={onUpdateNode}
             onUpdateEdge={onUpdateEdge}
             onDeleteEdge={onDeleteEdge}
