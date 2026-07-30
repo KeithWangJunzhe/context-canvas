@@ -51,6 +51,7 @@ import {
   statusLabel,
   toggleTag,
 } from './domain'
+import { CodexImportLauncher, type CodexImportPayload } from './features/codex-import'
 import { sampleWorkspace } from './sample'
 import { BlockStatus, BlockTag, ContextBlock, ContextEdge, ContextNode, Workspace } from './types'
 
@@ -1324,7 +1325,9 @@ export function App() {
   }, [bundle, bundleDraftEdited])
 
   useEffect(() => {
-    setSaveNotice(saveStoredWorkspace(workspace) ? 'Saved locally' : 'Local save failed')
+    const saved = saveStoredWorkspace(workspace)
+    setSaveNotice(saved ? 'Saved locally' : 'Local save failed')
+    if (!saved) setSaveToast('Local save failed')
   }, [workspace])
 
   useEffect(() => {
@@ -1387,6 +1390,35 @@ export function App() {
     })
   }
 
+  const importCodexSession = ({ patch, session, sourceFileName }: CodexImportPayload) => {
+    if (patch.nodes.length === 0) return
+    const existingSourceCount = workspace.nodes.filter((node) => node.type !== 'start' && node.type !== 'end').length
+    setFlowNodes((current) => [
+      ...current,
+      ...patch.nodes.map((node, index) => {
+        const layoutIndex = existingSourceCount + index
+        return {
+          id: node.id,
+          type: 'context',
+          position: { x: 300 + (layoutIndex % 2) * 280, y: 130 + Math.floor(layoutIndex / 2) * 190 },
+          data: node,
+        } satisfies ContextFlowNode
+      }),
+    ])
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: [...current.nodes, ...patch.nodes],
+      edges: [...current.edges, ...patch.edges],
+    }))
+    setSelectedNodeId(patch.nodes[0].id)
+    setSelectedEdgeId(null)
+    setActiveBlockId(null)
+    setActiveDocumentId(null)
+    setActiveImageId(null)
+    setImportNotice(`${sourceFileName} imported as ${session.turns.length} Codex Turn nodes.`)
+    setSaveToast(`Imported ${session.turns.length} Codex turns`)
+  }
+
   const undoWorkspace = () => {
     const previous = historyPastRef.current[historyPastRef.current.length - 1]
     if (!previous) return
@@ -1400,6 +1432,7 @@ export function App() {
     if (!next) return
     historyFutureRef.current = historyFutureRef.current.slice(1)
     historyPastRef.current = [...historyPastRef.current.slice(-49), workspace]
+    setFlowNodes((current) => makeFlowNodes(next).map((node) => current.find((existing) => existing.id === node.id) || node))
     setWorkspace(next)
   }
 
@@ -1795,6 +1828,7 @@ export function App() {
                 </div>
               ))}
             </div>
+            <CodexImportLauncher startNodeId={startNodeId} endNodeId={endNodeId} createId={createId} onImport={importCodexSession} />
             <div className="rail-callout">
               <Sparkles size={16} />
               <span>Auto orchestration later. For now, you make the context calls.</span>
