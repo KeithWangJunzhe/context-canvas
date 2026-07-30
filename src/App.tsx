@@ -46,6 +46,7 @@ import {
   createImageNode,
   createTextNode,
   downloadText,
+  generateBundleJson,
   generateBundleMarkdown,
   sliceTextToBlocks,
   statusLabel,
@@ -188,17 +189,7 @@ function bundleDownload(format: OutputFormat, markdown: string, workspace: Works
     return {
       filename: 'context-bundle.json',
       mime: 'application/json',
-      content: JSON.stringify(
-        {
-          generatedFrom: workspace.title,
-          updatedAt: new Date().toISOString(),
-          format,
-          markdown,
-          workspace,
-        },
-        null,
-        2,
-      ),
+      content: JSON.stringify(generateBundleJson(workspace), null, 2),
     }
   }
 

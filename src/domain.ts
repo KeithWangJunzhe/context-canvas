@@ -192,104 +192,157 @@ export function toggleTag(tags: BlockTag[], tag: BlockTag) {
   return tags.includes(tag) ? tags.filter((item) => item !== tag) : [...tags, tag]
 }
 
+function isContextNode(node: ContextNode) {
+  return node.type !== 'start' && node.type !== 'end' && node.type !== 'bundle'
+}
+
+function shouldReadStatus(status: BlockStatus) {
+  return status === 'pinned' || status === 'included'
+}
+
+function shouldSkipStatus(status: BlockStatus) {
+  return status === 'excluded' || status === 'needs_review'
+}
+
+function actorLabel(block: ContextBlock) {
+  return block.speakerName || block.role || ''
+}
+
+function connectionLabel(label: string) {
+  return label.trim() || 'related'
+}
+
+function sourceConnections(workspace: Workspace, node: ContextNode) {
+  return workspace.edges
+    .filter((edge) => edge.from === node.id || edge.to === node.id)
+    .map((edge) => {
+      const from = workspace.nodes.find((item) => item.id === edge.from)
+      const to = workspace.nodes.find((item) => item.id === edge.to)
+      return {
+        id: edge.id,
+        label: connectionLabel(edge.label),
+        from: {
+          id: edge.from,
+          title: from?.title || edge.from,
+        },
+        to: {
+          id: edge.to,
+          title: to?.title || edge.to,
+        },
+        summary: `${from?.title || edge.from} --${connectionLabel(edge.label)}--> ${to?.title || edge.to}`,
+      }
+    })
+}
+
+function blockToMarkdownLine(node: ContextNode, block: ContextBlock) {
+  const text = block.text?.trim()
+  if (!text) return ''
+  const actor = actorLabel(block)
+  const actorText = actor ? ` (${actor})` : ''
+  const reason = block.reason ? `\n  Reason: ${block.reason}` : ''
+  return `- [${block.status}] ${node.title}${actorText}: ${text}${reason}`
+}
+
+function regionToMarkdownLine(node: ContextNode, region: ImageRegion) {
+  const details = [
+    region.kind ? `type=${region.kind}` : '',
+    region.color ? `color=${region.color}` : '',
+    region.fontFamily ? `font=${region.fontFamily}` : '',
+  ].filter(Boolean)
+  const detailText = details.length > 0 ? ` (${details.join(', ')})` : ''
+  return `- [${region.status}] ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
+}
+
+function blockToJson(block: ContextBlock) {
+  return {
+    id: block.id,
+    type: block.type,
+    status: block.status,
+    role: block.role,
+    speakerName: block.speakerName,
+    text: block.text || '',
+    tags: block.tags,
+    reason: block.reason,
+    sourceOrder: block.sourceOrder,
+  }
+}
+
+function regionToJson(region: ImageRegion) {
+  return {
+    id: region.id,
+    kind: region.kind || 'bbox',
+    status: region.status,
+    box: region.box,
+    label: region.label,
+    note: region.note,
+    color: region.color,
+    fontFamily: region.fontFamily,
+    tags: region.tags,
+  }
+}
+
+function skippedBlockIndex(block: ContextBlock) {
+  return {
+    id: block.id,
+    type: block.type,
+    status: block.status,
+    role: block.role,
+    speakerName: block.speakerName,
+    tags: block.tags,
+    reason: block.reason,
+    sourceOrder: block.sourceOrder,
+    expand_available: true,
+  }
+}
+
+function skippedRegionIndex(region: ImageRegion) {
+  return {
+    id: region.id,
+    kind: region.kind || 'bbox',
+    status: region.status,
+    label: region.label,
+    tags: region.tags,
+    note: region.note,
+    expand_available: true,
+  }
+}
+
 export function generateBundleMarkdown(workspace: Workspace) {
   const pinned: string[] = []
   const sourceSections: string[] = []
 
-  const addBlock = (node: ContextNode, block: ContextBlock) => {
-    const text = block.text?.trim()
-    if (!text) return ''
-    const reason = block.reason ? `\n  Reason: ${block.reason}` : ''
-    const role = block.speakerName || block.role ? ` (${block.speakerName || block.role})` : ''
-    const line = `- ${node.title}${role}: ${text}${reason}`
-    if (block.status === 'pinned') pinned.push(line)
-    return line
-  }
-
-  const addDocumentBody = (node: ContextNode, body: string) => {
-    return [`#### Full Document`, '', body].join('\n')
-  }
-
-  const addRegion = (node: ContextNode, region: ImageRegion) => {
-    const details = [
-      region.kind ? `type=${region.kind}` : '',
-      region.color ? `color=${region.color}` : '',
-      region.fontFamily ? `font=${region.fontFamily}` : '',
-    ].filter(Boolean)
-    const detailText = details.length > 0 ? ` (${details.join(', ')})` : ''
-    return `- ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
-  }
-
-  const sourceConnections = (node: ContextNode) => {
-    const related = workspace.edges.filter((edge) => edge.from === node.id || edge.to === node.id)
-    if (related.length === 0) return ['- None']
-    return related.map((edge) => {
-      const peerId = edge.from === node.id ? edge.to : edge.from
-      const peer = workspace.nodes.find((item) => item.id === peerId)
-      const direction = edge.from === node.id ? 'To' : 'From'
-      return `- ${direction} ${peer?.title || peerId}: ${edge.label || 'related'}`
-    })
-  }
-
   workspace.nodes.forEach((node) => {
-    if (node.type === 'start' || node.type === 'end' || node.type === 'bundle') return
+    if (!isContextNode(node)) return
     const included: string[] = []
     const imageRegions: string[] = []
-    const excluded: string[] = []
-    const questions: string[] = []
-    const sourceName = node.sourceName || node.imageName || node.title
-    const sourcePath = node.sourcePath || node.imageName || 'Unavailable in browser import'
 
-    if (node.type === 'document') {
-      const body = node.body?.trim()
-      const hasExcludedDocument = node.blocks.some((block) => block.status === 'excluded' && !block.isGenerated)
-      if (body && !hasExcludedDocument) {
-        included.push(addDocumentBody(node, body))
-      }
-      node.blocks.forEach((block) => {
-        const line = addBlock(node, block)
-        if (!line) return
-        if (hasExcludedDocument && block.status === 'included' && !block.isGenerated) included.push(line)
-        if ((block.status === 'included' && block.isGenerated) || block.status === 'pinned') included.push(line)
-        if (block.status === 'excluded') excluded.push(line)
-        if (block.tags.includes('question')) questions.push(line)
-      })
-    } else {
-      node.blocks.forEach((block) => {
-        const line = addBlock(node, block)
-        if (!line) return
-        if (block.status === 'included' || block.status === 'pinned') included.push(line)
-        if (block.status === 'excluded') excluded.push(line)
-        if (block.tags.includes('question')) questions.push(line)
-      })
-    }
-    node.regions.forEach((region) => {
-      const line = addRegion(node, region)
-      if (region.status === 'excluded') excluded.push(line)
-      else imageRegions.push(line)
+    node.blocks.forEach((block) => {
+      if (!shouldReadStatus(block.status)) return
+      const line = blockToMarkdownLine(node, block)
+      if (!line) return
+      included.push(line)
+      if (block.status === 'pinned') pinned.push(line)
     })
+
+    node.regions.forEach((region) => {
+      if (!shouldReadStatus(region.status)) return
+      const line = regionToMarkdownLine(node, region)
+      imageRegions.push(line)
+      if (region.status === 'pinned') pinned.push(line)
+    })
+
+    if (included.length === 0 && imageRegions.length === 0) return
+
+    const connections = sourceConnections(workspace, node).map((connection) => `- ${connection.summary}`)
 
     sourceSections.push(
       [
         `### ${node.title}`,
         '',
-        `- Type: ${node.type}`,
-        `- File name: ${sourceName}`,
-        `- Source path: ${sourcePath}`,
-        '- Connections:',
-        ...sourceConnections(node),
-        '',
-        '#### Included Evidence',
+        ...(connections.length > 0 ? ['#### Connections', ...connections, ''] : []),
+        '#### Pinned / Included',
         included.join('\n') || '- None',
-        '',
-        '#### Image Annotations',
-        imageRegions.join('\n') || '- None',
-        '',
-        '#### Excluded / Stale Context',
-        excluded.join('\n') || '- None',
-        '',
-        '#### Open Questions',
-        questions.join('\n') || '- None',
+        ...(imageRegions.length > 0 ? ['', '#### Image Annotations', imageRegions.join('\n')] : []),
       ].join('\n'),
     )
   })
@@ -300,13 +353,89 @@ export function generateBundleMarkdown(workspace: Workspace) {
     `Generated from: ${workspace.title}`,
     `Updated: ${new Date().toLocaleString()}`,
     '',
-    '## Pinned Requirements',
+    'Read this bundle as curated context. Use pinned and included items by default; skip excluded and needs_review material unless the user explicitly asks to revisit it.',
+    '',
+    '## Pinned Snapshot',
     pinned.join('\n') || '- None',
     '',
     '## Context Sources',
     sourceSections.join('\n\n') || '- None',
     '',
   ].join('\n')
+}
+
+export function generateBundleJson(workspace: Workspace) {
+  const nodes = workspace.nodes
+    .filter(isContextNode)
+    .map((node) => {
+      const blocks = node.blocks.filter((block) => shouldReadStatus(block.status)).map(blockToJson)
+      const regions = node.regions.filter((region) => shouldReadStatus(region.status)).map(regionToJson)
+      if (blocks.length === 0 && regions.length === 0) return null
+      return {
+        id: node.id,
+        title: node.title,
+        kind: node.type,
+        source: {
+          name: node.sourceName || node.imageName || node.title,
+          path: node.sourcePath || node.imageName,
+        },
+        connections: sourceConnections(workspace, node).map((connection) => ({
+          id: connection.id,
+          label: connection.label,
+          from: connection.from,
+          to: connection.to,
+          summary: connection.summary,
+        })),
+        blocks,
+        image_regions: regions,
+      }
+    })
+    .filter((node): node is NonNullable<typeof node> => Boolean(node))
+
+  const skipped_nodes = workspace.nodes
+    .filter(isContextNode)
+    .map((node) => {
+      const skippedBlocks = node.blocks.filter((block) => shouldSkipStatus(block.status)).map(skippedBlockIndex)
+      const skippedRegions = node.regions.filter((region) => shouldSkipStatus(region.status)).map(skippedRegionIndex)
+      if (skippedBlocks.length === 0 && skippedRegions.length === 0) return null
+      return {
+        id: node.id,
+        title: node.title,
+        kind: node.type,
+        skipped_blocks: skippedBlocks,
+        skipped_image_regions: skippedRegions,
+      }
+    })
+    .filter((node): node is NonNullable<typeof node> => Boolean(node))
+
+  return {
+    _meta: {
+      schema: 'context-canvas.agent-bundle.v1',
+      generatedFrom: workspace.title,
+      updatedAt: new Date().toISOString(),
+      read_policy: 'Use pinned and included content by default. Excluded and needs_review items are indexed only and should be skipped unless explicitly requested.',
+      local_workspace_note: 'This JSON is an agent-readable context bundle, not a full canvas restore file. Use Export workspace for local UI state.',
+    },
+    relations: workspace.edges.map((edge) => {
+      const from = workspace.nodes.find((node) => node.id === edge.from)
+      const to = workspace.nodes.find((node) => node.id === edge.to)
+      return {
+        id: edge.id,
+        label: connectionLabel(edge.label),
+        from: {
+          id: edge.from,
+          title: from?.title || edge.from,
+        },
+        to: {
+          id: edge.to,
+          title: to?.title || edge.to,
+        },
+        summary: `${from?.title || edge.from} --${connectionLabel(edge.label)}--> ${to?.title || edge.to}`,
+      }
+    }),
+    nodes,
+    skipped_nodes,
+  }
 }
 
 export function downloadText(filename: string, content: string, mime = 'text/plain') {
