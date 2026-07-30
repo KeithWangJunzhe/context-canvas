@@ -59,6 +59,7 @@ type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
 type OutputFormat = 'md' | 'txt' | 'json'
 type ImageTool = 'bbox' | 'text'
+type BlockFilter = 'all' | BlockStatus
 type ImageAnnotationDraft = {
   kind: ImageTool
   box: [number, number, number, number]
@@ -575,6 +576,7 @@ function DocumentWorkspace({
             tags: status === 'pinned' ? ['requirement'] : status === 'excluded' ? ['noise'] : ['evidence'],
             reason: 'Selected from local document preview.',
             isGenerated: true,
+            sourceOrder: node.body && node.body.indexOf(text) >= 0 ? node.body.indexOf(text) : undefined,
           })
         }
         onUpdateBlock={(blockId, patch) => onUpdateBlock(node.id, blockId, patch)}
@@ -695,7 +697,7 @@ function BlockEditor({
   return (
     <div className={`block-card status-${block.status}`}>
       <div className="block-toolbar">
-        {block.role && <span className="role-chip">{block.role}</span>}
+        {(block.speakerName || block.role) && <span className="role-chip">{block.speakerName || block.role}</span>}
         <select value={block.status} onChange={(event) => onUpdate({ status: event.target.value as BlockStatus })}>
           {statusOptions.map((status) => (
             <option key={status} value={status}>
@@ -945,6 +947,8 @@ function Inspector({
   onDeleteBlock: (nodeId: string, blockId: string) => void
   onOpenImageWorkspace: (nodeId: string) => void
 }) {
+  const [blockFilter, setBlockFilter] = useState<BlockFilter>('all')
+
   if (edge) {
     return (
       <aside className="inspector">
@@ -990,6 +994,18 @@ function Inspector({
       </aside>
     )
   }
+
+  const orderedBlocks = node
+    ? [...node.blocks]
+        .sort((first, second) => {
+          const firstOrder = first.sourceOrder ?? (first.text && node.body ? node.body.indexOf(first.text) : -1)
+          const secondOrder = second.sourceOrder ?? (second.text && node.body ? node.body.indexOf(second.text) : -1)
+          const normalizedFirst = firstOrder >= 0 ? firstOrder : Number.MAX_SAFE_INTEGER
+          const normalizedSecond = secondOrder >= 0 ? secondOrder : Number.MAX_SAFE_INTEGER
+          return normalizedFirst - normalizedSecond
+        })
+        .filter((block) => blockFilter === 'all' || block.status === blockFilter)
+    : []
 
   return (
     <aside className="inspector">
@@ -1063,13 +1079,27 @@ function Inspector({
 
       {node.type !== 'start' && node.type !== 'end' && node.type !== 'image' && node.type !== 'bundle' && (
         <section className="panel-section">
-          <h3>{node.type === 'document' ? 'Structured Blocks' : 'Blocks'}</h3>
+          <div className="section-heading-row compact-heading">
+            <div>
+              <h3>{node.type === 'document' ? 'Structured Blocks' : 'Blocks'}</h3>
+              <p className="hint">{orderedBlocks.length} shown / {node.blocks.length} total</p>
+            </div>
+            <select className="block-filter" value={blockFilter} onChange={(event) => setBlockFilter(event.target.value as BlockFilter)}>
+              <option value="all">all</option>
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {statusLabel(status)}
+                </option>
+              ))}
+            </select>
+          </div>
           {node.type === 'document' && (
             <p className="hint">Preview and selection live in the center reader. This panel edits the structured blocks that feed the bundle.</p>
           )}
-          {node.blocks.map((block) => (
+          {orderedBlocks.map((block) => (
             <BlockEditor key={block.id} block={block} onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)} onDelete={() => onDeleteBlock(node.id, block.id)} />
           ))}
+          {orderedBlocks.length === 0 && <p className="hint">No blocks match this filter.</p>}
         </section>
       )}
 

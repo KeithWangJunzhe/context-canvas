@@ -89,7 +89,9 @@ Current docx limitations:
 Current block slicing:
 
 - Document/plain text blocks are split on blank lines.
-- Chat blocks try speaker markers first, such as `User:`, `Assistant:`, `用户:`, `助手:`, then fall back to blank-line splitting.
+- If a document or note has no paragraph breaks, the slicer falls back to chunks of five sentences.
+- Chat blocks try speaker markers first, such as `User:`, `Assistant:`, `用户:`, `助手:`, or a short `Name:` prefix. If no speaker markers are found, chat falls back to sentence-level blocks.
+- Sliced blocks store `sourceOrder` so the inspector can sort blocks by their position in the source text instead of by later annotation/edit time.
 
 Product decision:
 
@@ -164,6 +166,7 @@ Current implementation:
 - `activeDocumentId` controls whether the center pane is showing the document reader.
 - Document editing has a `Save & Back` control. Edits are already autosaved into workspace state; the button exits focused reader mode and returns the center pane to the canvas.
 - The structured block editor remains in the right inspector for now, even though it will need a cleaner high-volume UI later.
+- The block inspector sorts blocks by source text order and includes a quick status filter for `all`, `included`, `excluded`, `pinned`, and `needs_review`.
 - 2026-07-29 update: `Start` and `End` are system nodes that are always normalized into the workspace. Older `bundle` nodes are treated as `End` for compatibility.
 - New imports stay unconnected by default. The user decides which sources connect on the canvas.
 - If there are no user-authored source connections, bundle generation still follows workspace/import order, with pinned context emitted first.

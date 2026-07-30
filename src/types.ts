@@ -17,11 +17,13 @@ export interface ContextBlock {
   nodeId: string
   type: 'text' | 'message' | 'image_region' | 'note'
   role?: 'user' | 'assistant' | 'system' | 'tool' | 'unknown'
+  speakerName?: string
   text?: string
   status: BlockStatus
   tags: BlockTag[]
   reason?: string
   isGenerated?: boolean
+  sourceOrder?: number
 }
 
 export interface ImageRegion {

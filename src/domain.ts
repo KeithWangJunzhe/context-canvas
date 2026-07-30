@@ -1,50 +1,85 @@
 import { BlockStatus, BlockTag, ContextBlock, ContextNode, ImageRegion, Workspace } from './types'
 
 const rolePattern = /^(user|assistant|system|tool|developer|用户|助手|human|ai|chatgpt|claude|codex)\s*[:：]/i
+const speakerPattern = /^([^:：\n]{1,24})\s*[:：]\s*/
+const sentencePattern = /[^。！？.!?\n]+[。！？.!?]?/g
 
 export function createId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`
 }
 
-export function sliceTextToBlocks(text: string, nodeId: string, mode: 'chat' | 'document'): ContextBlock[] {
+function roleFromText(roleText: string): ContextBlock['role'] {
+  const normalizedRole = roleText.toLowerCase()
+  if (normalizedRole === 'user' || normalizedRole === 'human' || normalizedRole === '用户') return 'user'
+  if (
+    normalizedRole === 'assistant' ||
+    normalizedRole === 'ai' ||
+    normalizedRole === 'chatgpt' ||
+    normalizedRole === 'claude' ||
+    normalizedRole === 'codex' ||
+    normalizedRole === '助手'
+  ) {
+    return 'assistant'
+  }
+  if (normalizedRole === 'system' || normalizedRole === 'developer') return 'system'
+  if (normalizedRole === 'tool') return 'tool'
+  return 'unknown'
+}
+
+function splitSentences(text: string) {
+  return (text.match(sentencePattern) || [text]).map((part) => part.trim()).filter(Boolean)
+}
+
+function chunkParts(parts: string[], size: number) {
+  const chunks: string[] = []
+  for (let index = 0; index < parts.length; index += size) {
+    chunks.push(parts.slice(index, index + size).join(' ').trim())
+  }
+  return chunks.filter(Boolean)
+}
+
+function blockStart(text: string, part: string, searchFrom: number) {
+  const index = text.indexOf(part, searchFrom)
+  return index >= 0 ? index : searchFrom
+}
+
+export function sliceTextToBlocks(text: string, nodeId: string, mode: 'chat' | 'document' | 'note'): ContextBlock[] {
   const normalized = text.replace(/\r\n/g, '\n').trim()
   if (!normalized) return []
 
   if (mode === 'chat') {
     const blocks: ContextBlock[] = []
     let currentRole: ContextBlock['role'] = 'unknown'
+    let currentSpeaker = ''
     let currentLines: string[] = []
+    let searchFrom = 0
 
     const flush = () => {
       const content = currentLines.join('\n').trim()
       if (!content) return
+      const sourceOrder = blockStart(normalized, content, searchFrom)
+      searchFrom = sourceOrder + content.length
       blocks.push({
         id: createId('block'),
         nodeId,
         type: 'message',
         role: currentRole,
+        speakerName: currentSpeaker || undefined,
         text: content,
         status: 'needs_review',
         tags: [],
+        sourceOrder,
       })
     }
 
     for (const line of normalized.split('\n')) {
       const match = line.match(rolePattern)
-      if (match) {
+      const speakerMatch = match ? null : line.match(speakerPattern)
+      if (match || speakerMatch) {
         flush()
-        const roleText = match[1].toLowerCase()
-        currentRole =
-          roleText === 'user' || roleText === 'human' || roleText === '用户'
-            ? 'user'
-            : roleText === 'assistant' || roleText === 'ai' || roleText === 'chatgpt' || roleText === 'claude' || roleText === 'codex' || roleText === '助手'
-              ? 'assistant'
-              : roleText === 'system' || roleText === 'developer'
-                ? 'system'
-                : roleText === 'tool'
-                  ? 'tool'
-                  : 'unknown'
-        currentLines = [line.replace(rolePattern, '').trim()]
+        currentRole = match ? roleFromText(match[1]) : 'unknown'
+        currentSpeaker = match ? match[1] : speakerMatch?.[1].trim() || ''
+        currentLines = [line.replace(match ? rolePattern : speakerPattern, '').trim()]
       } else {
         currentLines.push(line)
       }
@@ -53,39 +88,55 @@ export function sliceTextToBlocks(text: string, nodeId: string, mode: 'chat' | '
     flush()
 
     if (blocks.length > 1) return blocks
+
+    searchFrom = 0
+    return splitSentences(normalized).map((sentence) => {
+      const sourceOrder = blockStart(normalized, sentence, searchFrom)
+      searchFrom = sourceOrder + sentence.length
+      return {
+        id: createId('block'),
+        nodeId,
+        type: 'message',
+        role: 'unknown',
+        text: sentence,
+        status: 'needs_review',
+        tags: [],
+        sourceOrder,
+      }
+    })
   }
 
-  return normalized
+  const paragraphParts = normalized
     .split(/\n{2,}/)
     .map((part) => part.trim())
     .filter(Boolean)
-    .map((part) => ({
-      id: createId('block'),
-      nodeId,
-      type: mode === 'chat' ? 'message' : 'text',
-      role: mode === 'chat' ? 'unknown' : undefined,
-      text: part,
-      status: mode === 'document' ? 'included' : 'needs_review',
-      tags: [],
-    }))
+  const parts =
+    paragraphParts.length > 1
+      ? paragraphParts
+      : chunkParts(splitSentences(normalized), 5)
+  let searchFrom = 0
+
+  return parts
+    .map((part) => {
+      const sourceOrder = blockStart(normalized, part, searchFrom)
+      searchFrom = sourceOrder + part.length
+      return {
+        id: createId('block'),
+        nodeId,
+        type: mode === 'note' ? 'note' : 'text',
+        text: part,
+        status: 'included',
+        tags: [],
+        sourceOrder,
+      }
+    })
 }
 
 export function createTextNode(type: 'chat' | 'document' | 'note', title: string, body: string, sourceName?: string, sourcePath?: string): ContextNode {
   const id = createId('node')
   const now = new Date().toISOString()
   const blocks =
-    type === 'note'
-      ? [
-          {
-            id: createId('block'),
-            nodeId: id,
-            type: 'note' as const,
-            text: body,
-            status: 'included' as const,
-            tags: ['evidence' as const],
-          },
-        ]
-      : sliceTextToBlocks(body, id, type === 'chat' ? 'chat' : 'document')
+    type === 'note' ? sliceTextToBlocks(body, id, 'note') : sliceTextToBlocks(body, id, type === 'chat' ? 'chat' : 'document')
 
   return {
     id,
@@ -149,7 +200,7 @@ export function generateBundleMarkdown(workspace: Workspace) {
     const text = block.text?.trim()
     if (!text) return ''
     const reason = block.reason ? `\n  Reason: ${block.reason}` : ''
-    const role = block.role ? ` (${block.role})` : ''
+    const role = block.speakerName || block.role ? ` (${block.speakerName || block.role})` : ''
     const line = `- ${node.title}${role}: ${text}${reason}`
     if (block.status === 'pinned') pinned.push(line)
     return line
