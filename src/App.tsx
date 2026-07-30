@@ -225,6 +225,10 @@ function nodeIcon(type: ContextNode['type']) {
   return <FileText size={16} />
 }
 
+function isTextReviewNode(node?: ContextNode): node is ContextNode {
+  return Boolean(node && ['document', 'chat', 'note'].includes(node.type) && typeof node.body === 'string')
+}
+
 function countByStatus(node: ContextNode, status: BlockStatus) {
   return node.blocks.filter((block) => block.status === status).length + node.regions.filter((region) => region.status === status).length
 }
@@ -502,7 +506,7 @@ function MarkdownPreview({
       <div className="section-heading-row">
         <div>
           <h3>{variant === 'workspace' ? node.title : 'Markdown Preview'}</h3>
-          <p>Select text in the preview, then mark it for the bundle. The original local file is read-only and will not be changed.</p>
+          <p>Select text in the preview, then mark it for the bundle. Source imports are read-only and will not be changed.</p>
         </div>
         <span className="role-chip">{previewBlocks.length} blocks</span>
       </div>
@@ -583,6 +587,12 @@ function DocumentWorkspace({
     const firstBlock = node.blocks.filter((block) => !block.isGenerated)[0]
     if (firstBlock) onActiveBlockChange(firstBlock.id)
   }, [node.id])
+
+  useEffect(() => {
+    if (!activeBlockId) return
+    const block = workspaceRef.current?.querySelector<HTMLElement>(`[data-preview-block-id="${activeBlockId}"]`)
+    block?.scrollIntoView({ block: 'nearest' })
+  }, [activeBlockId, node.id])
 
   const syncActiveBlockFromScroll = () => {
     const container = workspaceRef.current
@@ -730,17 +740,19 @@ function MarkdownBlock({
 function BlockEditor({
   block,
   isActive = false,
+  onSelect,
   onUpdate,
   onDelete,
 }: {
   block: ContextBlock
   isActive?: boolean
+  onSelect: () => void
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete: () => void
 }) {
   const setStatus = (status: BlockStatus) => onUpdate({ status: nextBlockStatus(block.status, status) })
   return (
-    <div className={`block-card status-${block.status} ${isActive ? 'is-active' : ''}`} data-block-editor-id={block.id}>
+    <div className={`block-card status-${block.status} ${isActive ? 'is-active' : ''}`} data-block-editor-id={block.id} onClick={onSelect}>
       <div className="block-toolbar">
         {(block.speakerName || block.role) && <span className="role-chip">{block.speakerName || block.role}</span>}
         <select value={block.status} onChange={(event) => onUpdate({ status: event.target.value as BlockStatus })}>
@@ -976,6 +988,8 @@ function Inspector({
   onDeleteRegion,
   onAddBlock,
   onDeleteBlock,
+  onSelectBlock,
+  onOpenTextWorkspace,
   onOpenImageWorkspace,
 }: {
   node?: ContextNode
@@ -992,6 +1006,8 @@ function Inspector({
   onDeleteRegion: (nodeId: string, regionId: string) => void
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
   onDeleteBlock: (nodeId: string, blockId: string) => void
+  onSelectBlock: (blockId: string) => void
+  onOpenTextWorkspace: (nodeId: string) => void
   onOpenImageWorkspace: (nodeId: string) => void
 }) {
   const [blockFilter, setBlockFilter] = useState<BlockFilter>('all')
@@ -1067,6 +1083,13 @@ function Inspector({
         <span className="node-icon">{nodeIcon(node.type)}</span>
         <input value={node.title} onChange={(event) => onUpdateNode(node.id, { title: event.target.value })} />
       </div>
+
+      {isTextReviewNode(node) && (
+        <button className="secondary-button wide" onClick={() => onOpenTextWorkspace(node.id)}>
+          <Maximize2 size={16} />
+          Review text
+        </button>
+      )}
 
       {node.type === 'image' && (
         <>
@@ -1155,6 +1178,7 @@ function Inspector({
               key={block.id}
               block={block}
               isActive={activeBlockId === block.id}
+              onSelect={() => onSelectBlock(block.id)}
               onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)}
               onDelete={() => onDeleteBlock(node.id, block.id)}
             />
@@ -1280,7 +1304,7 @@ export function App() {
   const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(initialWorkspace))
   const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(initialWorkspace))
   const [selectedNodeId, setSelectedNodeId] = useState<string>(() => initialWorkspace.nodes.find((node) => node.type !== 'start' && node.type !== 'end')?.id || startNodeId)
-  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
+  const [activeTextNodeId, setActiveTextNodeId] = useState<string | null>(null)
   const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showNewCanvas, setShowNewCanvas] = useState(false)
@@ -1301,7 +1325,7 @@ export function App() {
   const selectedEdge = selectedEdgeId ? workspace.edges.find((edge) => edge.id === selectedEdgeId) : undefined
   const selectedEdgeFrom = selectedEdge ? workspace.nodes.find((node) => node.id === selectedEdge.from) : undefined
   const selectedEdgeTo = selectedEdge ? workspace.nodes.find((node) => node.id === selectedEdge.to) : undefined
-  const activeDocument = activeDocumentId ? workspace.nodes.find((node) => node.id === activeDocumentId && node.type === 'document') : undefined
+  const activeTextNode = activeTextNodeId ? workspace.nodes.find((node) => node.id === activeTextNodeId && isTextReviewNode(node)) : undefined
   const activeImage = activeImageId ? workspace.nodes.find((node) => node.id === activeImageId && node.type === 'image') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
   const bundleToDownload = bundleDraftEdited ? bundleDraft : bundle
@@ -1330,9 +1354,9 @@ export function App() {
   }, [selectedNode, workspace.nodes])
 
   useEffect(() => {
-    if (activeDocumentId && !activeDocument) setActiveDocumentId(null)
+    if (activeTextNodeId && !activeTextNode) setActiveTextNodeId(null)
     if (activeImageId && !activeImage) setActiveImageId(null)
-  }, [activeDocument, activeDocumentId, activeImage, activeImageId])
+  }, [activeTextNode, activeTextNodeId, activeImage, activeImageId])
 
   useEffect(() => {
     if (selectedEdgeId && !selectedEdge) setSelectedEdgeId(null)
@@ -1402,7 +1426,7 @@ export function App() {
     setSelectedNodeId(node.id)
     setSelectedEdgeId(null)
     setActiveBlockId(null)
-    setActiveDocumentId(node.type === 'document' ? node.id : null)
+    setActiveTextNodeId(isTextReviewNode(node) ? node.id : null)
     setActiveImageId(node.type === 'image' ? node.id : null)
   }
 
@@ -1414,7 +1438,7 @@ export function App() {
       nodes: current.nodes.filter((item) => item.id !== nodeId),
       edges: current.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId),
     }))
-    if (activeDocumentId === nodeId) setActiveDocumentId(null)
+    if (activeTextNodeId === nodeId) setActiveTextNodeId(null)
     if (activeImageId === nodeId) setActiveImageId(null)
     if (selectedNodeId === nodeId) {
       const fallback = workspace.nodes.find((item) => item.id !== nodeId && item.type !== 'start' && item.type !== 'end') || workspace.nodes.find((item) => item.id === startNodeId)
@@ -1437,7 +1461,7 @@ export function App() {
     setSelectedNodeId(startNodeId)
     setSelectedEdgeId(null)
     setActiveBlockId(null)
-    setActiveDocumentId(null)
+    setActiveTextNodeId(null)
     setActiveImageId(null)
     setBundleDraft('')
     setBundleDraftEdited(false)
@@ -1592,6 +1616,14 @@ export function App() {
       ),
     }))
     if (activeBlockId === blockId) setActiveBlockId(null)
+  }
+
+  const selectBlockFromInspector = (blockId: string) => {
+    setActiveBlockId(blockId)
+    if (isTextReviewNode(selectedNode)) {
+      setActiveTextNodeId(selectedNode.id)
+      setActiveImageId(null)
+    }
   }
 
   const onAddBlock = (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => {
@@ -1773,7 +1805,7 @@ export function App() {
                     onClick={() => {
                       setSelectedNodeId(node.id)
                       setActiveBlockId(null)
-                      setActiveDocumentId(node.type === 'document' ? node.id : null)
+                      setActiveTextNodeId(isTextReviewNode(node) ? node.id : null)
                       setActiveImageId(node.type === 'image' ? node.id : null)
                     }}
                   >
@@ -1794,15 +1826,15 @@ export function App() {
           </aside>
 
           <section className="canvas-pane">
-            {activeDocument ? (
+            {activeTextNode ? (
               <DocumentWorkspace
-                node={activeDocument}
+                node={activeTextNode}
                 activeBlockId={activeBlockId || undefined}
                 onActiveBlockChange={setActiveBlockId}
                 onAddBlock={onAddBlock}
                 onUpdateBlock={onUpdateBlock}
                 onDeleteBlock={onDeleteBlock}
-                onExit={() => setActiveDocumentId(null)}
+                onExit={() => setActiveTextNodeId(null)}
               />
             ) : activeImage ? (
               <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onExit={() => setActiveImageId(null)} />
@@ -1819,13 +1851,13 @@ export function App() {
                   setSelectedEdgeId(null)
                   setActiveBlockId(null)
                   const contextNode = workspace.nodes.find((item) => item.id === node.id)
-                  setActiveDocumentId(contextNode?.type === 'document' ? contextNode.id : null)
+                  setActiveTextNodeId(isTextReviewNode(contextNode) ? contextNode.id : null)
                   setActiveImageId(contextNode?.type === 'image' ? contextNode.id : null)
                 }}
                 onEdgeClick={(event, edge) => {
                   event.stopPropagation()
                   setSelectedEdgeId(edge.id)
-                  setActiveDocumentId(null)
+                  setActiveTextNodeId(null)
                   setActiveImageId(null)
                 }}
                 onPaneClick={() => setSelectedEdgeId(null)}
@@ -1852,9 +1884,15 @@ export function App() {
             onDeleteRegion={onDeleteRegion}
             onAddBlock={onAddBlock}
             onDeleteBlock={onDeleteBlock}
+            onSelectBlock={selectBlockFromInspector}
+            onOpenTextWorkspace={(nodeId) => {
+              setSelectedNodeId(nodeId)
+              setActiveTextNodeId(nodeId)
+              setActiveImageId(null)
+            }}
             onOpenImageWorkspace={(nodeId) => {
               setSelectedNodeId(nodeId)
-              setActiveDocumentId(null)
+              setActiveTextNodeId(null)
               setActiveImageId(nodeId)
             }}
           />

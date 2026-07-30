@@ -168,6 +168,8 @@ Current implementation:
 - The structured block editor remains in the right inspector for now, even though it will need a cleaner high-volume UI later.
 - The block inspector sorts blocks by source text order and includes a quick status filter for `all`, `included`, `excluded`, `pinned`, and `needs_review`.
 - Focused document review now links the reader and inspector: scrolling the reader highlights the active preview block and scrolls the matching inspector block into view.
+- Inspector blocks can be selected directly. Selecting a block opens the matching text review for document/chat/note sources when needed and scrolls the reader to the matching preview block.
+- Chat and note nodes reuse the focused text review surface previously used by markdown/document nodes.
 - Canvas source nodes for chat/document/note have a `Slice` action that rebuilds rule-based source blocks from the original body text, keeps generated in-text annotations, and shows a toast when complete.
 - 2026-07-29 update: `Start` and `End` are system nodes that are always normalized into the workspace. Older `bundle` nodes are treated as `End` for compatibility.
 - New imports stay unconnected by default. The user decides which sources connect on the canvas.
