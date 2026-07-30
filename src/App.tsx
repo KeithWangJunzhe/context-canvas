@@ -435,6 +435,7 @@ function ImportPanel({
 function MarkdownPreview({
   node,
   activeBlockId,
+  onActiveBlockChange,
   onAddSelection,
   onUpdateBlock,
   onDeleteBlock,
@@ -442,6 +443,7 @@ function MarkdownPreview({
 }: {
   node: ContextNode
   activeBlockId?: string
+  onActiveBlockChange?: (blockId: string) => void
   onAddSelection: (status: BlockStatus, text: string) => void
   onUpdateBlock: (blockId: string, patch: Partial<ContextBlock>) => void
   onDeleteBlock?: (blockId: string) => void
@@ -552,6 +554,7 @@ function MarkdownPreview({
             block={block}
             isActive={activeBlockId === block.id}
             annotations={annotationBlocks}
+            onSelect={() => onActiveBlockChange?.(block.id)}
             onUpdate={(patch) => {
               if (node.blocks.some((item) => item.id === block.id)) onUpdateBlock(block.id, patch)
               else onAddSelection(patch.status || 'included', block.text || '')
@@ -582,6 +585,7 @@ function DocumentWorkspace({
   onExit: () => void
 }) {
   const workspaceRef = useRef<HTMLDivElement | null>(null)
+  const skipReaderAutoScrollRef = useRef(false)
 
   useEffect(() => {
     const firstBlock = node.blocks.filter((block) => !block.isGenerated)[0]
@@ -590,9 +594,18 @@ function DocumentWorkspace({
 
   useEffect(() => {
     if (!activeBlockId) return
+    if (skipReaderAutoScrollRef.current) {
+      skipReaderAutoScrollRef.current = false
+      return
+    }
     const block = workspaceRef.current?.querySelector<HTMLElement>(`[data-preview-block-id="${activeBlockId}"]`)
-    block?.scrollIntoView({ block: 'nearest' })
+    block?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [activeBlockId, node.id])
+
+  const selectBlockFromReader = (blockId: string) => {
+    skipReaderAutoScrollRef.current = true
+    onActiveBlockChange(blockId)
+  }
 
   const syncActiveBlockFromScroll = () => {
     const container = workspaceRef.current
@@ -603,7 +616,10 @@ function DocumentWorkspace({
     const visibleBlocks = blocks.filter((block) => block.getBoundingClientRect().top <= topGuide)
     const activeBlock = visibleBlocks[visibleBlocks.length - 1] || blocks[0]
     const blockId = activeBlock.dataset.previewBlockId
-    if (blockId) onActiveBlockChange(blockId)
+    if (blockId && blockId !== activeBlockId) {
+      skipReaderAutoScrollRef.current = true
+      onActiveBlockChange(blockId)
+    }
   }
 
   return (
@@ -618,6 +634,7 @@ function DocumentWorkspace({
       <MarkdownPreview
         node={node}
         activeBlockId={activeBlockId}
+        onActiveBlockChange={selectBlockFromReader}
         variant="workspace"
         onAddSelection={(status, text) =>
           onAddBlock(node.id, {
@@ -671,12 +688,14 @@ function MarkdownBlock({
   block,
   isActive = false,
   annotations = [],
+  onSelect,
   onUpdate,
   onDelete,
 }: {
   block: ContextBlock
   isActive?: boolean
   annotations?: ContextBlock[]
+  onSelect?: () => void
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete?: () => void
 }) {
@@ -688,7 +707,7 @@ function MarkdownBlock({
   const isList = lines.every((line) => !line.trim() || /^(\s*[-*+]\s+|\s*\d+\.\s+)/.test(line))
 
   return (
-    <div className={`md-block status-${block.status} ${isActive ? 'is-active' : ''}`} data-preview-block-id={block.id}>
+    <div className={`md-block status-${block.status} ${isActive ? 'is-active' : ''}`} data-preview-block-id={block.id} onClick={onSelect}>
       <div className="md-block-actions">
         <button
           className={block.status === 'pinned' ? 'active' : ''}
@@ -1016,7 +1035,7 @@ function Inspector({
   useEffect(() => {
     if (!activeBlockId) return
     const block = inspectorRef.current?.querySelector<HTMLElement>(`[data-block-editor-id="${activeBlockId}"]`)
-    block?.scrollIntoView({ block: 'nearest' })
+    block?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [activeBlockId, blockFilter, node?.id])
 
   if (edge) {

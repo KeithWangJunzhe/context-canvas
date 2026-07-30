@@ -246,6 +246,12 @@ Figma setup:
 
 ## Next Good Tasks
 
+2026-07-30 interaction note:
+
+- Text review now keeps block selection bidirectional.
+- Selecting a block in the inspector centers the matching reader paragraph with light smooth scrolling.
+- Clicking or scrolling reader paragraphs updates the inspector selection and centers the matching block without forcing the reader to scroll itself.
+
 Short-term:
 
 - Add quick reason editing after floating annotation.

@@ -589,6 +589,7 @@ button:disabled {
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 10px;
+  scroll-margin-block: 96px;
 }
 
 .block-card.is-active {
@@ -1153,6 +1154,8 @@ button:disabled {
   position: relative;
   padding: 12px 12px 10px;
   border-bottom: 1px solid #eef1f4;
+  cursor: pointer;
+  scroll-margin-block: 120px;
 }
 
 .md-block.is-active {
