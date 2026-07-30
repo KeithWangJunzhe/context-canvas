@@ -21,6 +21,14 @@ Context Canvas explores a workflow where users can import source material, previ
 
 This repository is currently a local PoC. The local dev and production build commands below have been tested. A hosted deployment path has not been finalized yet.
 
+## Branch Strategy
+
+- `main`: stable local PoC that should remain usable for manual testing.
+- `codex/codex-import-support`: open PR branch for Codex session import exploration.
+- `integration/import-agent-chats`: integration branch where PR #1 is merged for review, testing, and follow-up work without changing `main`.
+
+Feature work should usually happen on a feature branch and open a PR. Experimental imports or agent-chat work can be tested through an integration branch first, then merged back to `main` after review.
+
 ## Local Development
 
 Prerequisites:
