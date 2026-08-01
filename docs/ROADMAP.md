@@ -1,8 +1,8 @@
 # Context Canvas Roadmap
 
-Last updated: 2026-07-29
+Last updated: 2026-08-01
 
-This roadmap captures the current product phasing. It is intentionally practical: prove the workflow with the user's own work first, then polish interaction, then explore assisted context and intent operations.
+This roadmap captures the current product phasing. It is intentionally practical: prove the workflow with the user's own work first, make the interaction strong enough for repeated use, then explore larger agent integrations and assisted intent operations.
 
 ## Product Thesis
 
@@ -23,9 +23,9 @@ The product should help users separate and assemble:
 
 In short: agents are getting better at executing; humans still need a better way to express what they want executed.
 
-## Phase 1: Personal Usable Context Canvas
+## Phase 1: Personal Usable And Interaction-Ready Context Canvas
 
-Goal: the user can use the tool for real Codex work.
+Goal: the user can use the tool for real Codex work, and the interaction is calm enough for continuous context editing.
 
 Primary workflow:
 
@@ -50,6 +50,7 @@ Current capabilities:
 - md/txt/json bundle export
 - localStorage persistence
 - Data URL image persistence for refresh/restart and workspace JSON export/import
+- bidirectional reader/block review for text nodes
 
 Phase 1 validation:
 
@@ -61,6 +62,13 @@ Phase 1 validation:
 Phase 1 tail:
 
 - Make pasted messy project chat usable enough for real testing.
+- Improve rule-based slicing for chat, documents, and notes.
+- Add canvas-native text boxes, rectangles, and simple flow annotations.
+- Add overview screenshot export with matching structured context data.
+- Improve delete behavior for nodes, edges, blocks, and annotations.
+- Add practical keyboard shortcuts for frequent editing actions.
+- Clean up noisy block inspector states for high block counts.
+- Improve output preview as a final editable handoff surface.
 - Add copy-to-clipboard for the bundle draft if it becomes a frequent manual step.
 - Keep fixing reliability bugs that block personal use.
 
@@ -87,32 +95,33 @@ Recommended path:
 3. Keep blocks editable so the parser can be imperfect.
 4. Later explore LLM-assisted structure-only cleanup.
 
-## Phase 2: Interaction Polish
+## Phase 2: Productization Polish
 
-Goal: make the tool feel usable for 30 minutes of continuous work, not just one happy path.
+Goal: make the tool easier for other people to adopt, test, and contribute to after the creator's personal workflow is proven.
 
 Focus areas:
 
-- keyboard shortcuts for delete/backspace
-- clearer deletion behavior for nodes, edges, blocks, and annotations
-- stronger selected states
-- better source rail management
-- cleaner inspector for high block counts
-- improved canvas layout and node positioning
-- clearer image/document focused editor transitions
-- faster bundle copy/export flow
-- clearer autosave/manual save status
+- onboarding examples and demo workspaces
+- clearer README and contribution guide
+- public-facing product screenshots
+- stable bundle schema examples
 - better empty, error, and quota states
-- UX review from real use sessions
+- UX review notes from real use sessions
+- accessibility and responsive layout pass
+- internal design system cleanup
 
-Principle: Phase 2 should mostly reduce friction. Avoid adding heavy new capability before the basic workflow feels calm.
+Principle: Phase 2 should make the project easier to understand from the outside without overfitting the tool to a generic audience too early.
 
-## Phase 3: Assisted Context And Intent Ops
+## Phase 3: Agent Integration And Assisted Intent Ops
 
-Goal: explore where lightweight agent help genuinely reduces briefing effort.
+Goal: explore where lightweight agent help and external tool hooks genuinely reduce briefing effort.
+
+Integration experiments can start before Phase 3 if they are narrow and isolated, such as a contributor branch for one Codex or Claude Code import hook. Full compatibility across agent systems should remain a larger phase.
 
 Possible features:
 
+- Codex, Claude Code, OpenClaw, and other local agent import hooks
+- structured agent-canvas adapters
 - LLM-assisted chat slicing
 - auto-label requirements, decisions, assumptions, questions, evidence, and noise
 - local document search
@@ -122,6 +131,7 @@ Possible features:
 - bundle draft generation based on a stated goal
 - context diff between bundle versions
 - intent blocks such as goal, constraint, acceptance criteria, preference, non-goal, and open question
+- canvas overview screenshot plus coordinate-linked structured data
 
 Research questions:
 
