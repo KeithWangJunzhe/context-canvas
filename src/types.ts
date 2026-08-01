@@ -1,16 +1,16 @@
-export type NodeType = 'start' | 'document' | 'chat' | 'image' | 'note' | 'bundle' | 'end'
+export type NodeType = 'start' | 'document' | 'chat' | 'image' | 'note' | 'text_box' | 'bundle' | 'end'
 
 export type BlockStatus = 'included' | 'excluded' | 'pinned' | 'needs_review'
+
+export type BuiltInBlockTag = 'requirement' | 'decision' | 'assumption'
 
 export type BlockTag =
   | 'requirement'
   | 'decision'
-  | 'question'
   | 'assumption'
-  | 'evidence'
-  | 'noise'
-  | 'bug'
-  | 'ui'
+  | (string & {})
+
+export type TextBoxShape = 'rectangle' | 'rounded_rectangle' | 'diamond' | 'cylinder'
 
 export interface ContextBlock {
   id: string
@@ -51,6 +51,8 @@ export interface ContextNode {
   imageName?: string
   imageMime?: string
   imageSize?: number
+  shape?: TextBoxShape
+  shapeMeaning?: string
   blocks: ContextBlock[]
   regions: ImageRegion[]
   createdAt: string

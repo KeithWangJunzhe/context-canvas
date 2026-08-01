@@ -1,4 +1,4 @@
-import { BlockStatus, BlockTag, ContextBlock, ContextNode, ImageRegion, Workspace } from './types'
+import { BlockStatus, BlockTag, ContextBlock, ContextNode, ImageRegion, TextBoxShape, Workspace } from './types'
 
 const rolePattern = /^(user|assistant|system|tool|developer|用户|助手|human|ai|chatgpt|claude|codex)\s*[:：]/i
 const speakerPattern = /^([^:：\n]{1,24})\s*[:：]\s*/
@@ -184,6 +184,21 @@ export function createImageNode(title: string, imageUrl: string, imageName: stri
   }
 }
 
+export function createTextBoxNode(shape: TextBoxShape = 'rectangle'): ContextNode {
+  const now = new Date().toISOString()
+  return {
+    id: createId('node'),
+    type: 'text_box',
+    title: 'Text box',
+    body: 'Double-click or edit this text',
+    shape,
+    blocks: [],
+    regions: [],
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export function statusLabel(status: BlockStatus) {
   return status.replace('_', ' ')
 }
@@ -194,6 +209,10 @@ export function toggleTag(tags: BlockTag[], tag: BlockTag) {
 
 function isContextNode(node: ContextNode) {
   return node.type !== 'start' && node.type !== 'end' && node.type !== 'bundle'
+}
+
+function isTextBoxNode(node: ContextNode): boolean {
+  return node.type === 'text_box'
 }
 
 function shouldReadStatus(status: BlockStatus) {
@@ -313,6 +332,21 @@ export function generateBundleMarkdown(workspace: Workspace) {
 
   workspace.nodes.forEach((node) => {
     if (!isContextNode(node)) return
+    if (isTextBoxNode(node)) {
+      const text = node.body?.trim()
+      if (!text) return
+      const shape = node.shape || 'rectangle'
+      const meaning = node.shapeMeaning?.trim()
+      sourceSections.push(
+        [
+          `### ${node.title}`,
+          '',
+          `- [included] Text box: ${text}`,
+          `  Shape: ${shape}${meaning ? ` (${meaning})` : ''}`,
+        ].join('\n'),
+      )
+      return
+    }
     const included: string[] = []
     const imageRegions: string[] = []
 
@@ -368,6 +402,25 @@ export function generateBundleJson(workspace: Workspace) {
   const nodes = workspace.nodes
     .filter(isContextNode)
     .map((node) => {
+      if (isTextBoxNode(node)) {
+        const text = node.body?.trim()
+        if (!text) return null
+        return {
+          id: node.id,
+          title: node.title,
+          kind: 'text_box',
+          text,
+          shape: node.shape || 'rectangle',
+          shape_meaning: node.shapeMeaning?.trim() || undefined,
+          connections: sourceConnections(workspace, node).map((connection) => ({
+            id: connection.id,
+            label: connection.label,
+            from: connection.from,
+            to: connection.to,
+            summary: connection.summary,
+          })),
+        }
+      }
       const blocks = node.blocks.filter((block) => shouldReadStatus(block.status)).map(blockToJson)
       const regions = node.regions.filter((region) => shouldReadStatus(region.status)).map(regionToJson)
       if (blocks.length === 0 && regions.length === 0) return null

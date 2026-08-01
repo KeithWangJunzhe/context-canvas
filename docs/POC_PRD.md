@@ -112,6 +112,7 @@ Export should clearly separate:
 - Local web app.
 - Freeform canvas with draggable nodes.
 - Node types: document, chat transcript, image, note, bundle.
+- Semantic canvas text box nodes with rectangle, rounded rectangle, diamond, and cylinder shapes.
 - Paste/import flow for chat and markdown/plain text.
 - Drag-and-drop local `.md`, `.markdown`, and `.txt` files into the app.
 - Local markdown preview for document nodes.
@@ -134,7 +135,7 @@ Export should clearly separate:
 
 - Manual merge/split blocks.
 - Simple relationship lines between nodes.
-- Basic tags: requirement, decision, question, assumption, evidence, noise.
+- Basic tags: requirement, decision, assumption, plus one user-defined tag string.
 - Token or character estimate.
 - Archive/version note for bundle.
 - Sample imported transcript for testing.

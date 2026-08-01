@@ -145,3 +145,17 @@ More "foolproof" automatic orchestration can come later:
 
 But early philosophy should stay user-directed. The system assists context management; it does not fully take over context decisions.
 
+## Future Settings / Configuration
+
+Keep a lightweight settings entry point in the app, but defer the actual configuration surface until repeated use reveals stable preferences.
+
+Possible configuration areas:
+
+- Canvas shape legend defaults, such as diamond = decision or cylinder = database.
+- Whether a shape legend applies only to future nodes or can be applied in bulk to existing nodes.
+- Node-level meaning overrides for exceptions to the canvas legend.
+- Output style and context budget preferences.
+- Default import status and slicing behavior.
+- User preferences for local save, export format, and bundle verbosity.
+
+Product rule: configuration should change defaults and output policy without hiding or silently rewriting explicit node-level decisions.

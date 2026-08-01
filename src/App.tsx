@@ -21,6 +21,8 @@ import {
   Archive,
   ArrowLeft,
   BoxSelect,
+  Cylinder,
+  Diamond,
   Download,
   FileText,
   Flag,
@@ -36,7 +38,9 @@ import {
   Plus,
   Redo2,
   Scissors,
+  Settings,
   Sparkles,
+  Square,
   Trash2,
   Undo2,
 } from 'lucide-react'
@@ -45,6 +49,7 @@ import {
   createId,
   createImageNode,
   createTextNode,
+  createTextBoxNode,
   downloadText,
   generateBundleJson,
   generateBundleMarkdown,
@@ -53,10 +58,16 @@ import {
   toggleTag,
 } from './domain'
 import { sampleWorkspace } from './sample'
-import { BlockStatus, BlockTag, ContextBlock, ContextEdge, ContextNode, Workspace } from './types'
+import { BlockStatus, BlockTag, BuiltInBlockTag, ContextBlock, ContextEdge, ContextNode, TextBoxShape, Workspace } from './types'
 
 const statusOptions: BlockStatus[] = ['included', 'excluded', 'pinned', 'needs_review']
-const tagOptions: BlockTag[] = ['requirement', 'decision', 'question', 'assumption', 'evidence', 'noise', 'bug', 'ui']
+const tagOptions: BuiltInBlockTag[] = ['requirement', 'decision', 'assumption']
+const textBoxShapes: Array<{ value: TextBoxShape; label: string; icon: typeof Square }> = [
+  { value: 'rectangle', label: 'Rectangle', icon: Square },
+  { value: 'rounded_rectangle', label: 'Rounded rectangle', icon: Square },
+  { value: 'diamond', label: 'Decision diamond', icon: Diamond },
+  { value: 'cylinder', label: 'Database cylinder', icon: Cylinder },
+]
 type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
 type OutputFormat = 'md' | 'txt' | 'json'
@@ -211,16 +222,13 @@ function createEmptyWorkspace(): Workspace {
   })
 }
 
-function addTag(tags: BlockTag[], tag: BlockTag) {
-  return tags.includes(tag) ? tags : [...tags, tag]
-}
-
 function nodeIcon(type: ContextNode['type']) {
   if (type === 'start') return <Play size={16} />
   if (type === 'end') return <Flag size={16} />
   if (type === 'chat') return <MessageSquareText size={16} />
   if (type === 'image') return <ImageIcon size={16} />
   if (type === 'note') return <NotebookPen size={16} />
+  if (type === 'text_box') return <Pilcrow size={16} />
   if (type === 'bundle') return <Archive size={16} />
   return <FileText size={16} />
 }
@@ -238,6 +246,20 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
   const total = contextNode.blocks.length + contextNode.regions.length
   const isStart = contextNode.type === 'start'
   const isEnd = contextNode.type === 'end'
+  const isTextBox = contextNode.type === 'text_box'
+  if (isTextBox) {
+    return (
+      <div className={`text-box-node shape-${contextNode.shape || 'rectangle'} ${selected ? 'is-selected' : ''}`}>
+        <Handle type="target" position={Position.Left} />
+        <div className="text-box-content">
+          <span className="text-box-title">{contextNode.title}</span>
+          <span className="text-box-body">{contextNode.body || 'Text box'}</span>
+          {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
+        </div>
+        <Handle type="source" position={Position.Right} />
+      </div>
+    )
+  }
   return (
     <div className={`canvas-node ${selected ? 'is-selected' : ''} node-${contextNode.type}`}>
       {!isStart && <Handle type="target" position={Position.Left} />}
@@ -293,6 +315,20 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
 }
 
 const nodeTypes = { context: ContextNodeCard }
+
+function CanvasToolbar({ onAddTextBox }: { onAddTextBox: (shape: TextBoxShape) => void }) {
+  return (
+    <div className="canvas-toolbar" aria-label="Insert canvas node">
+      <span className="canvas-toolbar-label">Insert</span>
+      {textBoxShapes.map(({ value, label, icon: Icon }) => (
+        <button key={value} className="canvas-tool-button" onClick={() => onAddTextBox(value)} title={`Insert ${label}`} aria-label={`Insert ${label}`}>
+          <Icon size={15} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function makeFlowNodes(workspace: Workspace): ContextFlowNode[] {
   return workspace.nodes.map((node, index) => {
@@ -641,7 +677,7 @@ function DocumentWorkspace({
             type: 'text',
             text,
             status,
-            tags: status === 'pinned' ? ['requirement'] : status === 'excluded' ? ['noise'] : ['evidence'],
+            tags: [],
             reason: 'Selected from local document preview.',
             isGenerated: true,
             sourceOrder: node.body && node.body.indexOf(text) >= 0 ? node.body.indexOf(text) : undefined,
@@ -711,16 +747,16 @@ function MarkdownBlock({
       <div className="md-block-actions">
         <button
           className={block.status === 'pinned' ? 'active' : ''}
-          onClick={() => onUpdate({ status: nextBlockStatus(block.status, 'pinned'), tags: addTag(block.tags, 'requirement') })}
+          onClick={() => onUpdate({ status: nextBlockStatus(block.status, 'pinned') })}
         >
           Pin
         </button>
-        <button className={block.status === 'included' ? 'active' : ''} onClick={() => onUpdate({ status: 'included', tags: addTag(block.tags, 'evidence') })}>
+        <button className={block.status === 'included' ? 'active' : ''} onClick={() => onUpdate({ status: 'included' })}>
           Include
         </button>
         <button
           className={block.status === 'excluded' ? 'active' : ''}
-          onClick={() => onUpdate({ status: nextBlockStatus(block.status, 'excluded'), tags: addTag(block.tags, 'noise') })}
+          onClick={() => onUpdate({ status: nextBlockStatus(block.status, 'excluded') })}
         >
           Ignore
         </button>
@@ -769,7 +805,15 @@ function BlockEditor({
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete: () => void
 }) {
+  const [customTag, setCustomTag] = useState('')
   const setStatus = (status: BlockStatus) => onUpdate({ status: nextBlockStatus(block.status, status) })
+  const addCustomTag = () => {
+    const tag = customTag.trim()
+    if (!tag || block.tags.includes(tag)) return
+    onUpdate({ tags: [...block.tags, tag] })
+    setCustomTag('')
+  }
+  const customTags = block.tags.filter((tag) => !tagOptions.includes(tag as BuiltInBlockTag))
   return (
     <div className={`block-card status-${block.status} ${isActive ? 'is-active' : ''}`} data-block-editor-id={block.id} onClick={onSelect}>
       <div className="block-toolbar">
@@ -807,6 +851,27 @@ function BlockEditor({
             {tag}
           </button>
         ))}
+        {customTags.map((tag) => (
+          <button key={tag} className="tag active" onClick={() => onUpdate({ tags: block.tags.filter((item) => item !== tag) })} title="Remove custom tag">
+            {tag} x
+          </button>
+        ))}
+      </div>
+      <div className="custom-tag-row">
+        <input
+          value={customTag}
+          onChange={(event) => setCustomTag(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              addCustomTag()
+            }
+          }}
+          placeholder="Custom tag"
+        />
+        <button className="secondary-button" onClick={addCustomTag} disabled={!customTag.trim()}>
+          Add tag
+        </button>
       </div>
       <input
         className="reason-input"
@@ -1120,6 +1185,35 @@ function Inspector({
         </>
       )}
 
+      {node.type === 'text_box' && (
+        <section className="panel-section text-box-inspector">
+          <h3>Text box node</h3>
+          <label className="field">
+            <span>Shape</span>
+            <select value={node.shape || 'rectangle'} onChange={(event) => onUpdateNode(node.id, { shape: event.target.value as TextBoxShape })}>
+              {textBoxShapes.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Shape meaning (optional)</span>
+            <input
+              value={node.shapeMeaning || ''}
+              onChange={(event) => onUpdateNode(node.id, { shapeMeaning: event.target.value })}
+              placeholder="e.g. decision, database, information"
+            />
+          </label>
+          <label className="field">
+            <span>Text</span>
+            <textarea value={node.body || ''} onChange={(event) => onUpdateNode(node.id, { body: event.target.value })} rows={5} />
+          </label>
+          <p className="hint">The shape is visual shorthand. The optional meaning is included in structured output as a helper field.</p>
+        </section>
+      )}
+
       {node.regions.length > 0 && (
         <section className="panel-section">
           <h3>Image Regions</h3>
@@ -1173,7 +1267,7 @@ function Inspector({
         </div>
       )}
 
-      {node.type !== 'start' && node.type !== 'end' && node.type !== 'image' && node.type !== 'bundle' && (
+      {node.type !== 'start' && node.type !== 'end' && node.type !== 'image' && node.type !== 'bundle' && node.type !== 'text_box' && (
         <section className="panel-section">
           <div className="section-heading-row compact-heading">
             <div>
@@ -1449,6 +1543,11 @@ export function App() {
     setActiveImageId(node.type === 'image' ? node.id : null)
   }
 
+  const addTextBox = (shape: TextBoxShape) => {
+    addNode(createTextBoxNode(shape))
+    setSaveToast(`${textBoxShapes.find((item) => item.value === shape)?.label || 'Text box'} added`)
+  }
+
   const deleteSource = (nodeId: string) => {
     const node = workspace.nodes.find((item) => item.id === nodeId)
     if (!node || node.type === 'start' || node.type === 'end') return
@@ -1564,7 +1663,25 @@ export function App() {
     }
   }
 
-  const onNodesChange = useCallback((changes: NodeChange<ContextFlowNode>[]) => setFlowNodes((nodes) => applyNodeChanges<ContextFlowNode>(changes, nodes)), [])
+  const onNodesChange = (changes: NodeChange<ContextFlowNode>[]) => {
+    const requestedRemovedIds = changes
+      .filter((change) => change.type === 'remove' && 'id' in change)
+      .map((change) => change.id)
+    const removedIds = requestedRemovedIds.filter((id) => id !== startNodeId && id !== endNodeId)
+    setFlowNodes((nodes) => applyNodeChanges<ContextFlowNode>(changes.filter((change) => !('id' in change) || ![startNodeId, endNodeId].includes(change.id)), nodes))
+    if (removedIds.length === 0) return
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.filter((node) => !removedIds.includes(node.id)),
+      edges: current.edges.filter((edge) => !removedIds.includes(edge.from) && !removedIds.includes(edge.to)),
+    }))
+    if (removedIds.includes(selectedNodeId)) {
+      setSelectedNodeId(startNodeId)
+      setActiveBlockId(null)
+      setActiveTextNodeId(null)
+      setActiveImageId(null)
+    }
+  }
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     const removedIds = changes
       .filter((change) => change.type === 'remove' && 'id' in change)
@@ -1785,6 +1902,14 @@ export function App() {
               <Plus size={16} />
               New canvas
             </button>
+            <button
+              className="icon-button"
+              onClick={() => setSaveToast('Settings coming later')}
+              title="Settings coming later"
+              aria-label="Settings coming later"
+            >
+              <Settings size={16} />
+            </button>
             <button className="icon-button" onClick={undoWorkspace} disabled={historyPastRef.current.length === 0} aria-label="Undo">
               <Undo2 size={16} />
             </button>
@@ -1858,33 +1983,38 @@ export function App() {
             ) : activeImage ? (
               <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onExit={() => setActiveImageId(null)} />
             ) : (
-              <ReactFlow
-                nodes={flowNodes}
-                edges={flowEdges}
-                nodeTypes={nodeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={(_, node) => {
-                  setSelectedNodeId(node.id)
-                  setSelectedEdgeId(null)
-                  setActiveBlockId(null)
-                  const contextNode = workspace.nodes.find((item) => item.id === node.id)
-                  setActiveTextNodeId(isTextReviewNode(contextNode) ? contextNode.id : null)
-                  setActiveImageId(contextNode?.type === 'image' ? contextNode.id : null)
-                }}
-                onEdgeClick={(event, edge) => {
-                  event.stopPropagation()
-                  setSelectedEdgeId(edge.id)
-                  setActiveTextNodeId(null)
-                  setActiveImageId(null)
-                }}
-                onPaneClick={() => setSelectedEdgeId(null)}
-                fitView
-              >
-                <Background gap={22} size={1} />
-                <Controls />
-              </ReactFlow>
+              <div className="canvas-stage">
+                <CanvasToolbar onAddTextBox={addTextBox} />
+                <div className="canvas-flow">
+                  <ReactFlow
+                    nodes={flowNodes}
+                    edges={flowEdges}
+                    nodeTypes={nodeTypes}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    onNodeClick={(_, node) => {
+                      setSelectedNodeId(node.id)
+                      setSelectedEdgeId(null)
+                      setActiveBlockId(null)
+                      const contextNode = workspace.nodes.find((item) => item.id === node.id)
+                      setActiveTextNodeId(isTextReviewNode(contextNode) ? contextNode.id : null)
+                      setActiveImageId(contextNode?.type === 'image' ? contextNode.id : null)
+                    }}
+                    onEdgeClick={(event, edge) => {
+                      event.stopPropagation()
+                      setSelectedEdgeId(edge.id)
+                      setActiveTextNodeId(null)
+                      setActiveImageId(null)
+                    }}
+                    onPaneClick={() => setSelectedEdgeId(null)}
+                    fitView
+                  >
+                    <Background gap={22} size={1} />
+                    <Controls />
+                  </ReactFlow>
+                </div>
+              </div>
             )}
           </section>
 

@@ -64,6 +64,7 @@ Phase 1 tail:
 - Make pasted messy project chat usable enough for real testing.
 - Improve rule-based slicing for chat, documents, and notes.
 - Add canvas-native text boxes, rectangles, and simple flow annotations.
+- Keep semantic text box nodes small and legible: rectangle, rounded rectangle, diamond, and cylinder with optional shape meaning.
 - Add overview screenshot export with matching structured context data.
 - Improve delete behavior for nodes, edges, blocks, and annotations.
 - Add practical keyboard shortcuts for frequent editing actions.

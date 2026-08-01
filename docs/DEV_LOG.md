@@ -1,6 +1,6 @@
 # Context Canvas PoC Dev Log
 
-Last updated: 2026-07-29
+Last updated: 2026-08-02
 
 This file is a lightweight handoff note for future Codex work on the local PoC.
 
@@ -52,6 +52,15 @@ Do not auto-start the dev server unless the user asks. The user wants to trigger
 
 ## Implemented Features
 
+### Semantic Text Box Nodes
+
+- Canvas now has an insert toolbar for semantic text box nodes.
+- Supported shapes are `rectangle`, `rounded_rectangle`, `diamond`, and `cylinder`.
+- Text boxes are stored as `ContextNode` values with `type: "text_box"`, `body`, `shape`, and optional `shapeMeaning` fields.
+- The shape is visual shorthand. `shapeMeaning` is an optional helper for agent-readable output; an empty field does not assign special meaning.
+- Text box nodes can be connected like other context nodes and are included in Markdown/JSON bundle output when they contain text.
+- React Flow Delete/Backspace now removes selected source nodes from both the visible flow and workspace state, including their connected edges. Start and End are protected.
+
 ### Local Markdown / Text / Docx Import
 
 - Drag-and-drop `.md`, `.markdown`, `.txt`, `.docx`, and image files into the app.
@@ -98,6 +107,12 @@ Product decision:
 - Local documents default to `included` after import.
 - The user's mental model is "I dropped this document in as context"; they should only need to mark important or stale parts.
 - Block mode is for quick bulk operations on paragraphs/sections.
+
+Tag decision:
+
+- Built-in block tags are now limited to `requirement`, `decision`, and `assumption`.
+- Users can add a custom string tag when a more specific label is useful.
+- Status actions do not silently add tags; status and semantic tags remain separate decisions.
 
 Block statuses:
 
