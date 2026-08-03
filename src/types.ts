@@ -53,6 +53,10 @@ export interface ContextNode {
   imageSize?: number
   shape?: TextBoxShape
   shapeMeaning?: string
+  backgroundColor?: string
+  canvasWidth?: number
+  canvasHeight?: number
+  canvasPosition?: { x: number; y: number }
   blocks: ContextBlock[]
   regions: ImageRegion[]
   createdAt: string

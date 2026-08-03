@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, DragEvent, PointerEvent, type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   Controls,
@@ -10,6 +10,7 @@ import {
   Position,
   ReactFlow,
   ReactFlowProvider,
+  NodeResizer,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -65,8 +66,8 @@ const tagOptions: BuiltInBlockTag[] = ['requirement', 'decision', 'assumption']
 const textBoxShapes: Array<{ value: TextBoxShape; label: string; icon: typeof Square }> = [
   { value: 'rectangle', label: 'Rectangle', icon: Square },
   { value: 'rounded_rectangle', label: 'Rounded rectangle', icon: Square },
-  { value: 'diamond', label: 'Decision diamond', icon: Diamond },
-  { value: 'cylinder', label: 'Database cylinder', icon: Cylinder },
+  { value: 'diamond', label: 'Diamond', icon: Diamond },
+  { value: 'cylinder', label: 'Cylinder', icon: Cylinder },
 ]
 type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
@@ -84,6 +85,7 @@ type ContextFlowData = ContextNode & {
   onOutputFormatChange?: (format: OutputFormat) => void
   onDownloadBundle?: () => void
   onResliceNode?: (nodeId: string) => void
+  onResizeTextBox?: (nodeId: string, width: number, height: number) => void
 }
 type ContextFlowNode = Node<ContextFlowData>
 
@@ -93,6 +95,7 @@ const endNodeId = 'node_end'
 const localWorkspaceKey = 'context-canvas.workspace.v1'
 const imageAnnotationColors = ['#1f6feb', '#d1242f', '#2da44e', '#bf8700', '#8250df']
 const imageTextFonts = ['Inter', 'Georgia', 'Menlo', 'Arial', 'Courier New']
+const textBoxBackgroundColors = ['#f5f9ff', '#f4fbf6', '#fff8df', '#fff3f1', '#f5f1ff']
 
 function createSystemNode(id: string, type: 'start' | 'end', title: string): ContextNode {
   const now = new Date().toISOString()
@@ -108,22 +111,27 @@ function createSystemNode(id: string, type: 'start' | 'end', title: string): Con
 }
 
 function withSystemNodes(workspace: Workspace): Workspace {
-  const legacyBundleIds = workspace.nodes.filter((node) => node.type === 'bundle').map((node) => node.id)
-  const nodes = workspace.nodes.map((node) => (node.type === 'bundle' ? { ...node, id: endNodeId, type: 'end' as const, title: 'End' } : node))
-  const hasStart = nodes.some((node) => node.id === startNodeId || node.type === 'start')
-  const hasEnd = nodes.some((node) => node.id === endNodeId || node.type === 'end')
+  const legacyStartIds = workspace.nodes.filter((node) => node.type === 'start' && node.id !== startNodeId).map((node) => node.id)
+  const legacyEndIds = workspace.nodes
+    .filter((node) => (node.type === 'end' || node.type === 'bundle') && node.id !== endNodeId)
+    .map((node) => node.id)
+  const existingStart = workspace.nodes.find((node) => node.id === startNodeId || node.type === 'start')
+  const existingEnd = workspace.nodes.find((node) => node.id === endNodeId || node.type === 'end' || node.type === 'bundle')
+  const contentNodes = workspace.nodes.filter((node) => node.type !== 'start' && node.type !== 'end' && node.type !== 'bundle')
+  const startNode = existingStart
+    ? { ...existingStart, id: startNodeId, type: 'start' as const, title: 'Start' }
+    : createSystemNode(startNodeId, 'start', 'Start')
+  const endNode = existingEnd
+    ? { ...existingEnd, id: endNodeId, type: 'end' as const, title: 'End' }
+    : createSystemNode(endNodeId, 'end', 'End')
+  const systemIdMap = new Map<string, string>([
+    ...legacyStartIds.map((id) => [id, startNodeId] as const),
+    ...legacyEndIds.map((id) => [id, endNodeId] as const),
+  ])
   return {
     ...workspace,
-    nodes: [
-      ...(hasStart ? [] : [createSystemNode(startNodeId, 'start', 'Start')]),
-      ...nodes,
-      ...(hasEnd ? [] : [createSystemNode(endNodeId, 'end', 'End')]),
-    ],
-    edges: workspace.edges.map((edge) => ({
-      ...edge,
-      from: legacyBundleIds.includes(edge.from) ? endNodeId : edge.from,
-      to: legacyBundleIds.includes(edge.to) ? endNodeId : edge.to,
-    })),
+    nodes: [startNode, ...contentNodes, endNode],
+    edges: workspace.edges.map((edge) => ({ ...edge, from: systemIdMap.get(edge.from) || edge.from, to: systemIdMap.get(edge.to) || edge.to })),
     activeBundleId: endNodeId,
   }
 }
@@ -248,15 +256,39 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
   const isEnd = contextNode.type === 'end'
   const isTextBox = contextNode.type === 'text_box'
   if (isTextBox) {
+    const isDiamond = contextNode.shape === 'diamond'
     return (
-      <div className={`text-box-node shape-${contextNode.shape || 'rectangle'} ${selected ? 'is-selected' : ''}`}>
-        <Handle type="target" position={Position.Left} />
-        <div className="text-box-content">
-          <span className="text-box-title">{contextNode.title}</span>
-          <span className="text-box-body">{contextNode.body || 'Text box'}</span>
-          {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
+      <div className={`text-box-node ${selected ? 'is-selected' : ''}`}>
+        <NodeResizer
+          isVisible={selected}
+          minWidth={120}
+          minHeight={72}
+          color="#1f6feb"
+          onResizeEnd={(_, params) => contextNode.onResizeTextBox?.(contextNode.id, params.width, params.height)}
+        />
+        {isDiamond ? (
+          <>
+            <Handle type="target" position={Position.Top} id="target-top" className="shape-handle diamond-top" />
+            <Handle type="source" position={Position.Right} id="source-right" className="shape-handle diamond-right" />
+            <Handle type="target" position={Position.Bottom} id="target-bottom" className="shape-handle diamond-bottom" />
+            <Handle type="source" position={Position.Left} id="source-left" className="shape-handle diamond-left" />
+          </>
+        ) : (
+          <>
+            <Handle type="target" position={Position.Left} />
+            <Handle type="source" position={Position.Right} />
+          </>
+        )}
+        <div
+          className={`text-box-surface shape-${contextNode.shape || 'rectangle'}`}
+          style={{ '--text-box-bg': contextNode.backgroundColor || textBoxBackgroundColors[0] } as CSSProperties}
+        >
+          <div className="text-box-content">
+            <span className="text-box-title">{contextNode.title}</span>
+            <span className="text-box-body">{contextNode.body || 'Text box'}</span>
+            {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
+          </div>
         </div>
-        <Handle type="source" position={Position.Right} />
       </div>
     )
   }
@@ -333,16 +365,21 @@ function CanvasToolbar({ onAddTextBox }: { onAddTextBox: (shape: TextBoxShape) =
 function makeFlowNodes(workspace: Workspace): ContextFlowNode[] {
   return workspace.nodes.map((node, index) => {
     const sourceIndex = workspace.nodes.filter((item) => item.type !== 'start' && item.type !== 'end').findIndex((item) => item.id === node.id)
-    const position =
+    const defaultPosition =
       node.type === 'start'
         ? { x: 40, y: 260 }
         : node.type === 'end'
           ? { x: 900, y: 260 }
           : { x: 300 + (sourceIndex % 2) * 280, y: 130 + Math.floor(Math.max(sourceIndex, 0) / 2) * 190 }
+    const position = node.canvasPosition || defaultPosition
     return {
       id: node.id,
       type: 'context',
       position,
+      style:
+        node.type === 'text_box'
+          ? { width: node.canvasWidth || 176, height: node.canvasHeight || 92 }
+          : undefined,
       data: node,
     }
   })
@@ -1189,6 +1226,20 @@ function Inspector({
         <section className="panel-section text-box-inspector">
           <h3>Text box node</h3>
           <label className="field">
+            <span>Background color</span>
+            <div className="region-style-row">
+              {textBoxBackgroundColors.map((color) => (
+                <button
+                  key={color}
+                  className={color === (node.backgroundColor || textBoxBackgroundColors[0]) ? 'swatch active' : 'swatch'}
+                  style={{ backgroundColor: color }}
+                  onClick={() => onUpdateNode(node.id, { backgroundColor: color })}
+                  aria-label={`Use background color ${color}`}
+                />
+              ))}
+            </div>
+          </label>
+          <label className="field">
             <span>Shape</span>
             <select value={node.shape || 'rectangle'} onChange={(event) => onUpdateNode(node.id, { shape: event.target.value as TextBoxShape })}>
               {textBoxShapes.map(({ value, label }) => (
@@ -1452,7 +1503,7 @@ export function App() {
   }, [bundle, bundleDraftEdited])
 
   useEffect(() => {
-    setSaveNotice(saveStoredWorkspace(workspace) ? 'Saved locally' : 'Local save failed')
+    setSaveNotice(saveStoredWorkspace(withSystemNodes(workspace)) ? 'Saved locally' : 'Local save failed')
   }, [workspace])
 
   useEffect(() => {
@@ -1480,23 +1531,38 @@ export function App() {
       workspace.nodes.map((contextNode, index) => {
         const existing = current.find((node) => node.id === contextNode.id)
         const data =
-          contextNode.type === 'end'
+            contextNode.type === 'end'
             ? {
                 ...contextNode,
                 onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
                 outputFormat,
                 onOutputFormatChange: setOutputFormat,
                 onDownloadBundle: downloadBundle,
+                onResizeTextBox,
               }
             : {
                 ...contextNode,
                 onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
+                onResizeTextBox,
               }
-        if (existing) return { ...existing, data }
+        if (existing)
+          return {
+            ...existing,
+            style:
+              contextNode.type === 'text_box'
+                ? { ...(existing.style || {}), width: contextNode.canvasWidth || 176, height: contextNode.canvasHeight || 92 }
+                : existing.style,
+            position: contextNode.canvasPosition || existing.position,
+            data,
+          }
         return {
           id: contextNode.id,
           type: 'context',
           position: { x: 140 + index * 42, y: 140 + index * 28 },
+          style:
+            contextNode.type === 'text_box'
+              ? { width: contextNode.canvasWidth || 176, height: contextNode.canvasHeight || 92 }
+              : undefined,
           data,
         }
       }),
@@ -1565,7 +1631,7 @@ export function App() {
   }
 
   const saveWorkspaceLocally = () => {
-    const ok = saveStoredWorkspace(workspace)
+    const ok = saveStoredWorkspace(withSystemNodes(workspace))
     if (ok) historyFutureRef.current = []
     setSaveNotice(ok ? 'Saved locally' : 'Local save failed')
     setSaveToast(ok ? 'Saved successfully' : 'Local save failed')
@@ -1727,6 +1793,20 @@ export function App() {
       ...current,
       nodes: current.nodes.map((node) => (node.id === nodeId ? { ...node, ...patch, updatedAt: new Date().toISOString() } : node)),
     }))
+  }
+
+  const onResizeTextBox = (nodeId: string, width: number, height: number) => {
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) =>
+        node.id === nodeId ? { ...node, canvasWidth: Math.round(width), canvasHeight: Math.round(height), updatedAt: new Date().toISOString() } : node,
+      ),
+    }))
+  }
+
+  const onNodeDragStop = (_event: unknown, node: ContextFlowNode) => {
+    if (node.id === startNodeId || node.id === endNodeId) return
+    onUpdateNode(node.id, { canvasPosition: { x: Math.round(node.position.x), y: Math.round(node.position.y) } })
   }
 
   const onUpdateBlock = (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => {
@@ -1993,6 +2073,8 @@ export function App() {
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
+                    onNodeDragStop={onNodeDragStop}
+                    deleteKeyCode={['Backspace', 'Delete']}
                     onNodeClick={(_, node) => {
                       setSelectedNodeId(node.id)
                       setSelectedEdgeId(null)

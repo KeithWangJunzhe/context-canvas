@@ -192,8 +192,11 @@ export function createTextBoxNode(shape: TextBoxShape = 'rectangle'): ContextNod
     title: 'Text box',
     body: 'Double-click or edit this text',
     shape,
+    backgroundColor: '#f5f9ff',
     blocks: [],
     regions: [],
+    canvasWidth: 176,
+    canvasHeight: 92,
     createdAt: now,
     updatedAt: now,
   }
