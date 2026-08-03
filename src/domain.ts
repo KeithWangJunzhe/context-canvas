@@ -227,7 +227,7 @@ function shouldSkipStatus(status: BlockStatus) {
 }
 
 function actorLabel(block: ContextBlock) {
-  return block.speakerName || block.role || ''
+  return block.speakerName || (block.role && block.role !== 'unknown' ? block.role : '')
 }
 
 function connectionLabel(label: string) {
@@ -256,13 +256,13 @@ function sourceConnections(workspace: Workspace, node: ContextNode) {
     })
 }
 
-function blockToMarkdownLine(node: ContextNode, block: ContextBlock) {
+function blockToMarkdownLine(block: ContextBlock) {
   const text = block.text?.trim()
   if (!text) return ''
   const actor = actorLabel(block)
   const actorText = actor ? ` (${actor})` : ''
   const reason = block.reason ? `\n  Reason: ${block.reason}` : ''
-  return `- [${block.status}] ${node.title}${actorText}: ${text}${reason}`
+  return `- [${block.status}]${actorText ? `${actorText}:` : ''} ${text}${reason}`
 }
 
 function regionToMarkdownLine(node: ContextNode, region: ImageRegion) {
@@ -273,6 +273,11 @@ function regionToMarkdownLine(node: ContextNode, region: ImageRegion) {
   ].filter(Boolean)
   const detailText = details.length > 0 ? ` (${details.join(', ')})` : ''
   return `- [${region.status}] ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
+}
+
+function shortConnectionForNode(node: ContextNode, connection: ReturnType<typeof sourceConnections>[number]) {
+  const target = connection.from.id === node.id ? connection.to.title : connection.from.title
+  return `- ${connection.label} -> ${target}`
 }
 
 function blockToJson(block: ContextBlock) {
@@ -330,7 +335,6 @@ function skippedRegionIndex(region: ImageRegion) {
 }
 
 export function generateBundleMarkdown(workspace: Workspace) {
-  const pinned: string[] = []
   const sourceSections: string[] = []
 
   workspace.nodes.forEach((node) => {
@@ -355,30 +359,27 @@ export function generateBundleMarkdown(workspace: Workspace) {
 
     node.blocks.forEach((block) => {
       if (!shouldReadStatus(block.status)) return
-      const line = blockToMarkdownLine(node, block)
+      const line = blockToMarkdownLine(block)
       if (!line) return
       included.push(line)
-      if (block.status === 'pinned') pinned.push(line)
     })
 
     node.regions.forEach((region) => {
       if (!shouldReadStatus(region.status)) return
       const line = regionToMarkdownLine(node, region)
       imageRegions.push(line)
-      if (region.status === 'pinned') pinned.push(line)
     })
 
     if (included.length === 0 && imageRegions.length === 0) return
 
-    const connections = sourceConnections(workspace, node).map((connection) => `- ${connection.summary}`)
+    const connections = sourceConnections(workspace, node).map((connection) => shortConnectionForNode(node, connection))
 
     sourceSections.push(
       [
         `### ${node.title}`,
         '',
-        ...(connections.length > 0 ? ['#### Connections', ...connections, ''] : []),
-        '#### Pinned / Included',
-        included.join('\n') || '- None',
+        ...(connections.length > 0 ? ['Connections:', ...connections, ''] : []),
+        included.join('\n'),
         ...(imageRegions.length > 0 ? ['', '#### Image Annotations', imageRegions.join('\n')] : []),
       ].join('\n'),
     )
@@ -391,9 +392,6 @@ export function generateBundleMarkdown(workspace: Workspace) {
     `Updated: ${new Date().toLocaleString()}`,
     '',
     'Read this bundle as curated context. Use pinned and included items by default; skip excluded and needs_review material unless the user explicitly asks to revisit it.',
-    '',
-    '## Pinned Snapshot',
-    pinned.join('\n') || '- None',
     '',
     '## Context Sources',
     sourceSections.join('\n\n') || '- None',

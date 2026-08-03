@@ -71,7 +71,7 @@ const textBoxShapes: Array<{ value: TextBoxShape; label: string; icon: typeof Sq
 ]
 type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
-type OutputFormat = 'md' | 'txt' | 'json'
+type OutputFormat = 'md' | 'json'
 type ImageTool = 'bbox' | 'text'
 type BlockFilter = 'all' | BlockStatus
 type ImageAnnotationDraft = {
@@ -208,13 +208,13 @@ function bundleDownload(format: OutputFormat, markdown: string, workspace: Works
     return {
       filename: 'context-bundle.json',
       mime: 'application/json',
-      content: JSON.stringify(generateBundleJson(workspace), null, 2),
+      content: markdown,
     }
   }
 
   return {
-    filename: format === 'md' ? 'context-bundle.md' : 'context-bundle.txt',
-    mime: format === 'md' ? 'text/markdown' : 'text/plain',
+    filename: 'context-bundle.md',
+    mime: 'text/markdown',
     content: markdown,
   }
 }
@@ -332,7 +332,6 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
             onChange={(event) => contextNode.onOutputFormatChange?.(event.target.value as OutputFormat)}
           >
             <option value="md">Markdown</option>
-            <option value="txt">Text</option>
             <option value="json">JSON</option>
           </select>
           <button onClick={() => contextNode.onDownloadBundle?.()}>
@@ -854,7 +853,7 @@ function BlockEditor({
   return (
     <div className={`block-card status-${block.status} ${isActive ? 'is-active' : ''}`} data-block-editor-id={block.id} onClick={onSelect}>
       <div className="block-toolbar">
-        {(block.speakerName || block.role) && <span className="role-chip">{block.speakerName || block.role}</span>}
+        {(block.speakerName || (block.role && block.role !== 'unknown')) && <span className="role-chip">{block.speakerName || block.role}</span>}
         <select value={block.status} onChange={(event) => onUpdate({ status: event.target.value as BlockStatus })}>
           {statusOptions.map((status) => (
             <option key={status} value={status}>
@@ -1374,12 +1373,14 @@ function BundlePreview({
   generated,
   draft,
   isDirty,
+  format,
   onDraftChange,
   onReset,
 }: {
   generated: string
   draft: string
   isDirty: boolean
+  format: OutputFormat
   onDraftChange: (value: string) => void
   onReset: () => void
 }) {
@@ -1395,6 +1396,7 @@ function BundlePreview({
         <Link size={16} />
       </div>
       <div className="preview-mode-row">
+        <span className="preview-format">{format}</span>
         <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')}>
           Edit
         </button>
@@ -1492,15 +1494,23 @@ export function App() {
   const activeTextNode = activeTextNodeId ? workspace.nodes.find((node) => node.id === activeTextNodeId && isTextReviewNode(node)) : undefined
   const activeImage = activeImageId ? workspace.nodes.find((node) => node.id === activeImageId && node.type === 'image') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
-  const bundleToDownload = bundleDraftEdited ? bundleDraft : bundle
+  const generatedOutput = useMemo(
+    () => (outputFormat === 'json' ? JSON.stringify(generateBundleJson(workspace), null, 2) : bundle),
+    [bundle, outputFormat, workspace],
+  )
+  const bundleToDownload = bundleDraftEdited ? bundleDraft : generatedOutput
   const downloadBundle = useCallback(() => {
     const payload = bundleDownload(outputFormat, bundleToDownload, workspace)
     downloadText(payload.filename, payload.content, payload.mime)
   }, [bundleToDownload, outputFormat, workspace])
+  const changeOutputFormat = useCallback((format: OutputFormat) => {
+    setOutputFormat(format)
+    setBundleDraftEdited(false)
+  }, [])
 
   useEffect(() => {
-    if (!bundleDraftEdited) setBundleDraft(bundle)
-  }, [bundle, bundleDraftEdited])
+    if (!bundleDraftEdited) setBundleDraft(generatedOutput)
+  }, [generatedOutput, bundleDraftEdited])
 
   useEffect(() => {
     setSaveNotice(saveStoredWorkspace(withSystemNodes(workspace)) ? 'Saved locally' : 'Local save failed')
@@ -1536,7 +1546,7 @@ export function App() {
                 ...contextNode,
                 onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
                 outputFormat,
-                onOutputFormatChange: setOutputFormat,
+                onOutputFormatChange: changeOutputFormat,
                 onDownloadBundle: downloadBundle,
                 onResizeTextBox,
               }
@@ -1568,7 +1578,7 @@ export function App() {
       }),
     )
     setFlowEdges(makeFlowEdges(workspace))
-  }, [downloadBundle, outputFormat, workspace])
+  }, [changeOutputFormat, downloadBundle, outputFormat, workspace])
 
   const updateWorkspace = (updater: (workspace: Workspace) => Workspace) => {
     setWorkspace((current) => {
@@ -2001,9 +2011,8 @@ export function App() {
               Export workspace
             </button>
             <span className="save-status">{saveNotice}</span>
-            <select className="toolbar-select" value={outputFormat} onChange={(event) => setOutputFormat(event.target.value as OutputFormat)} aria-label="Bundle output format">
+            <select className="toolbar-select" value={outputFormat} onChange={(event) => changeOutputFormat(event.target.value as OutputFormat)} aria-label="Bundle output format">
               <option value="md">md</option>
-              <option value="txt">txt</option>
               <option value="json">json</option>
             </select>
             <button className="primary-button" onClick={downloadBundle}>
@@ -2129,15 +2138,16 @@ export function App() {
           />
 
           <BundlePreview
-            generated={bundle}
+            generated={generatedOutput}
             draft={bundleDraft}
             isDirty={bundleDraftEdited}
+            format={outputFormat}
             onDraftChange={(value) => {
               setBundleDraft(value)
-              setBundleDraftEdited(value !== bundle)
+              setBundleDraftEdited(value !== generatedOutput)
             }}
             onReset={() => {
-              setBundleDraft(bundle)
+              setBundleDraft(generatedOutput)
               setBundleDraftEdited(false)
             }}
           />
