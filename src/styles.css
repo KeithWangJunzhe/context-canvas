@@ -367,6 +367,82 @@ button:disabled {
   background: #f4f5f6;
 }
 
+.complex-chat-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.workspace-header h2 {
+  margin: 2px 0 4px;
+  font-size: 18px;
+}
+
+.workspace-header p {
+  margin: 0;
+  color: #69727d;
+  font-size: 12px;
+}
+
+.complex-chat-turn-list {
+  display: grid;
+  gap: 12px;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.complex-chat-turn {
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.complex-chat-turn-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf0f2;
+  margin-bottom: 10px;
+}
+
+.complex-chat-turn-header h3 {
+  margin: 3px 0 0;
+  font-size: 14px;
+}
+
+.turn-status {
+  border: 1px solid #cfd6dd;
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: #69727d;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.turn-completed {
+  border-color: #70ba83;
+  background: #f0faf2;
+  color: #276738;
+}
+
+.complex-chat-node {
+  background: #fbfcff;
+  border-color: #a9bfdc;
+}
+
 .document-workspace-bar {
   display: flex;
   align-items: center;

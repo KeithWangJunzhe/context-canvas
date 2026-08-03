@@ -9,6 +9,7 @@ import './codex-import.css'
 type CopyState = 'copying' | 'copied' | 'failed'
 
 type ImportChoices = {
+  splitTurns: boolean
   includeCommentary: boolean
   includeAgentMessages: boolean
   includeToolCalls: boolean
@@ -67,11 +68,12 @@ function CodexImportModal({
   const [parsedFile, setParsedFile] = useState<ParsedFile | null>(null)
   const [error, setError] = useState('')
   const [choices, setChoices] = useState<ImportChoices>({
+    splitTurns: true,
     includeCommentary: true,
     includeAgentMessages: true,
     includeToolCalls: true,
     includeToolOutputs: true,
-    connectStartAndEnd: true,
+    connectStartAndEnd: false,
   })
   const modalRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -191,7 +193,13 @@ function CodexImportModal({
         tool_output: choices.includeToolOutputs ? 'needs_review' : 'omit',
       },
     })
-    onImport({ patch, session: parsedFile.session, sourceFileName: parsedFile.file.name })
+    onImport({
+      patch,
+      session: parsedFile.session,
+      sourceFileName: parsedFile.file.name,
+      splitTurns: choices.splitTurns,
+      connectStartAndEnd: choices.connectStartAndEnd,
+    })
   }
 
   const copyMessage =
@@ -319,7 +327,7 @@ function CodexImportModal({
               <div><dt>Assistant 消息</dt><dd>{parsedFile.session.stats.assistantMessageCount}</dd></div>
               <div><dt>子 Agent 消息</dt><dd>{parsedFile.session.stats.agentMessageCount}</dd></div>
               <div><dt>工具调用</dt><dd>{parsedFile.session.stats.toolCallCount}</dd></div>
-              <div><dt>将创建节点</dt><dd>{parsedFile.session.turns.length}</dd></div>
+              <div><dt>将创建</dt><dd>1 个 Complex Chat</dd></div>
               <div>
                 <dt>导入边界</dt>
                 <dd>{parsedFile.session.boundary.kind === 'marker' ? '已按本次 marker 截断' : '已验证本次前缀导出文件'}</dd>
@@ -327,6 +335,7 @@ function CodexImportModal({
             </dl>
 
             <div className="codex-import-options">
+              <label><input type="checkbox" checked={choices.splitTurns} onChange={(event) => setChoices((current) => ({ ...current, splitTurns: event.target.checked }))} />按 Turn 切分（展开后显示）</label>
               <label><input type="checkbox" checked={choices.includeCommentary} onChange={(event) => setChoices((current) => ({ ...current, includeCommentary: event.target.checked }))} />Assistant commentary</label>
               <label><input type="checkbox" checked={choices.includeAgentMessages} onChange={(event) => setChoices((current) => ({ ...current, includeAgentMessages: event.target.checked }))} />子 Agent 消息</label>
               <label><input type="checkbox" checked={choices.includeToolCalls} onChange={(event) => setChoices((current) => ({ ...current, includeToolCalls: event.target.checked }))} />工具调用</label>
@@ -352,7 +361,7 @@ function CodexImportModal({
           <button className="secondary-button" onClick={onClose}>取消</button>
           <button className="primary-button" disabled={!parsedFile || isParsing} onClick={confirmImport}>
             <Bot size={16} />
-            {parsedFile ? `导入为 ${parsedFile.session.turns.length} 个 Turn Nodes` : '等待会话文件'}
+            {parsedFile ? '导入为 Complex Chat' : '等待会话文件'}
           </button>
         </div>
       </div>

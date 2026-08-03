@@ -21,6 +21,7 @@ import {
 import {
   Archive,
   ArrowLeft,
+  Bot,
   BoxSelect,
   Cylinder,
   Diamond,
@@ -60,7 +61,7 @@ import {
 } from './domain'
 import { CodexImportLauncher, type CodexImportPayload } from './features/codex-import'
 import { sampleWorkspace } from './sample'
-import { BlockStatus, BlockTag, BuiltInBlockTag, ContextBlock, ContextEdge, ContextNode, TextBoxShape, Workspace } from './types'
+import { BlockStatus, BlockTag, BuiltInBlockTag, ContextBlock, ContextEdge, ContextNode, ContextTurn, TextBoxShape, Workspace } from './types'
 
 const statusOptions: BlockStatus[] = ['included', 'excluded', 'pinned', 'needs_review']
 const tagOptions: BuiltInBlockTag[] = ['requirement', 'decision', 'assumption']
@@ -87,6 +88,7 @@ type ContextFlowData = ContextNode & {
   onDownloadBundle?: () => void
   onResliceNode?: (nodeId: string) => void
   onResizeTextBox?: (nodeId: string, width: number, height: number) => void
+  onOpenComplexChat?: (nodeId: string) => void
 }
 type ContextFlowNode = Node<ContextFlowData>
 
@@ -235,6 +237,7 @@ function nodeIcon(type: ContextNode['type']) {
   if (type === 'start') return <Play size={16} />
   if (type === 'end') return <Flag size={16} />
   if (type === 'chat') return <MessageSquareText size={16} />
+  if (type === 'complex_chat') return <Bot size={16} />
   if (type === 'image') return <ImageIcon size={16} />
   if (type === 'note') return <NotebookPen size={16} />
   if (type === 'text_box') return <Pilcrow size={16} />
@@ -256,6 +259,7 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
   const isStart = contextNode.type === 'start'
   const isEnd = contextNode.type === 'end'
   const isTextBox = contextNode.type === 'text_box'
+  const isComplexChat = contextNode.type === 'complex_chat'
   if (isTextBox) {
     const isDiamond = contextNode.shape === 'diamond'
     return (
@@ -290,6 +294,32 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
             {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
           </div>
         </div>
+      </div>
+    )
+  }
+  if (isComplexChat) {
+    const turns = contextNode.turns || []
+    return (
+      <div className={`canvas-node complex-chat-node ${selected ? 'is-selected' : ''}`}>
+        <Handle type="target" position={Position.Left} />
+        <div className="node-header">
+          <span className="node-icon">{nodeIcon(contextNode.type)}</span>
+          <span className="node-title">{contextNode.title}</span>
+        </div>
+        <div className="node-meta">
+          <span>complex chat</span>
+          <span>{turns.length} turns</span>
+        </div>
+        <div className="status-strip">
+          <span className="pill pinned">{countByStatus(contextNode, 'pinned')} pin</span>
+          <span className="pill included">{countByStatus(contextNode, 'included')} in</span>
+          <span className="pill needs_review">{countByStatus(contextNode, 'needs_review')} review</span>
+        </div>
+        <button className="node-mini-action nodrag nopan" onClick={() => contextNode.onOpenComplexChat?.(contextNode.id)}>
+          <MessageSquareText size={13} />
+          Open turns
+        </button>
+        <Handle type="source" position={Position.Right} />
       </div>
     )
   }
@@ -920,6 +950,59 @@ function BlockEditor({
   )
 }
 
+function ComplexChatWorkspace({
+  node,
+  onExit,
+  onUpdateBlock,
+  onDeleteBlock,
+}: {
+  node: ContextNode
+  onExit: () => void
+  onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
+  onDeleteBlock: (nodeId: string, blockId: string) => void
+}) {
+  const turns = node.turns || []
+  return (
+    <div className="document-workspace complex-chat-workspace">
+      <div className="workspace-header">
+        <button className="secondary-button" onClick={onExit}>
+          <ArrowLeft size={16} />
+          Save & exit
+        </button>
+        <div>
+          <div className="eyebrow">Complex Chat</div>
+          <h2>{node.title}</h2>
+          <p>{turns.length} turns · {node.blocks.length} blocks · imported session remains read-only at source</p>
+        </div>
+      </div>
+      <div className="complex-chat-turn-list">
+        {turns.map((turn) => (
+          <article className="complex-chat-turn" key={turn.id}>
+            <div className="complex-chat-turn-header">
+              <div>
+                <span className="eyebrow">Turn {turn.sequence}</span>
+                <h3>{turn.title}</h3>
+              </div>
+              <span className={`turn-status turn-${turn.status}`}>{turn.status.replace('_', ' ')}</span>
+            </div>
+            {turn.blocks.map((block) => (
+              <BlockEditor
+                key={block.id}
+                block={block}
+                onSelect={() => undefined}
+                onUpdate={(patch) => onUpdateBlock(node.id, block.id, patch)}
+                onDelete={() => onDeleteBlock(node.id, block.id)}
+              />
+            ))}
+            {turn.blocks.length === 0 && <p className="hint">No readable blocks in this turn.</p>}
+          </article>
+        ))}
+        {turns.length === 0 && <div className="empty-state"><MessageSquareText size={22} /><h2>No turns imported</h2></div>}
+      </div>
+    </div>
+  )
+}
+
 function ImageInspector({
   node,
   onAddRegion,
@@ -1472,6 +1555,7 @@ export function App() {
   const [flowEdges, setFlowEdges] = useState<Edge[]>(() => makeFlowEdges(initialWorkspace))
   const [selectedNodeId, setSelectedNodeId] = useState<string>(() => initialWorkspace.nodes.find((node) => node.type !== 'start' && node.type !== 'end')?.id || startNodeId)
   const [activeTextNodeId, setActiveTextNodeId] = useState<string | null>(null)
+  const [activeComplexChatId, setActiveComplexChatId] = useState<string | null>(null)
   const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showNewCanvas, setShowNewCanvas] = useState(false)
@@ -1493,6 +1577,7 @@ export function App() {
   const selectedEdgeFrom = selectedEdge ? workspace.nodes.find((node) => node.id === selectedEdge.from) : undefined
   const selectedEdgeTo = selectedEdge ? workspace.nodes.find((node) => node.id === selectedEdge.to) : undefined
   const activeTextNode = activeTextNodeId ? workspace.nodes.find((node) => node.id === activeTextNodeId && isTextReviewNode(node)) : undefined
+  const activeComplexChat = activeComplexChatId ? workspace.nodes.find((node) => node.id === activeComplexChatId && node.type === 'complex_chat') : undefined
   const activeImage = activeImageId ? workspace.nodes.find((node) => node.id === activeImageId && node.type === 'image') : undefined
   const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
   const generatedOutput = useMemo(
@@ -1530,8 +1615,9 @@ export function App() {
 
   useEffect(() => {
     if (activeTextNodeId && !activeTextNode) setActiveTextNodeId(null)
+    if (activeComplexChatId && !activeComplexChat) setActiveComplexChatId(null)
     if (activeImageId && !activeImage) setActiveImageId(null)
-  }, [activeTextNode, activeTextNodeId, activeImage, activeImageId])
+  }, [activeTextNode, activeTextNodeId, activeComplexChat, activeComplexChatId, activeImage, activeImageId])
 
   useEffect(() => {
     if (selectedEdgeId && !selectedEdge) setSelectedEdgeId(null)
@@ -1546,6 +1632,12 @@ export function App() {
             ? {
                 ...contextNode,
                 onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
+                onOpenComplexChat: (nodeId: string) => {
+                  setSelectedNodeId(nodeId)
+                  setActiveComplexChatId(nodeId)
+                  setActiveTextNodeId(null)
+                  setActiveImageId(null)
+                },
                 outputFormat,
                 onOutputFormatChange: changeOutputFormat,
                 onDownloadBundle: downloadBundle,
@@ -1554,6 +1646,12 @@ export function App() {
             : {
                 ...contextNode,
                 onResliceNode: (nodeId: string) => resliceNodeRef.current(nodeId),
+                onOpenComplexChat: (nodeId: string) => {
+                  setSelectedNodeId(nodeId)
+                  setActiveComplexChatId(nodeId)
+                  setActiveTextNodeId(null)
+                  setActiveImageId(null)
+                },
                 onResizeTextBox,
               }
         if (existing)
@@ -1592,33 +1690,65 @@ export function App() {
     })
   }
 
-  const importCodexSession = ({ patch, session, sourceFileName }: CodexImportPayload) => {
+  const importCodexSession = ({ patch, session, sourceFileName, splitTurns, connectStartAndEnd }: CodexImportPayload) => {
     if (patch.nodes.length === 0) return
-    const existingSourceCount = workspace.nodes.filter((node) => node.type !== 'start' && node.type !== 'end').length
-    setFlowNodes((current) => [
-      ...current,
-      ...patch.nodes.map((node, index) => {
-        const layoutIndex = existingSourceCount + index
-        return {
-          id: node.id,
-          type: 'context',
-          position: { x: 300 + (layoutIndex % 2) * 280, y: 130 + Math.floor(layoutIndex / 2) * 190 },
-          data: node,
-        } satisfies ContextFlowNode
-      }),
-    ])
+    const sessionNodeId = createId('node_codex_session')
+    const importedTurns: ContextTurn[] = splitTurns
+      ? patch.nodes.map((turnNode, index) => ({
+          id: turnNode.id,
+          sequence: index + 1,
+          title: turnNode.title,
+          status: session.turns[index]?.status || 'completed',
+          blocks: turnNode.blocks.map((block) => ({ ...block, nodeId: sessionNodeId })),
+          startedAt: session.turns[index]?.startedAt,
+          completedAt: session.turns[index]?.completedAt,
+        }))
+      : [
+          {
+            id: createId('turn_codex_session'),
+            sequence: 1,
+            title: 'Full Codex session',
+            status: session.turns.every((turn) => turn.status === 'completed') ? 'completed' : 'in_progress',
+            blocks: patch.nodes.flatMap((turnNode) => turnNode.blocks.map((block) => ({ ...block, nodeId: sessionNodeId }))),
+          },
+        ]
+    const sessionNode: ContextNode = {
+      id: sessionNodeId,
+      type: 'complex_chat',
+      title: `Codex session · ${sourceFileName.replace(/\.jsonl$/i, '')}`,
+      sourceName: sourceFileName,
+      sourcePath: sourceFileName,
+      turns: importedTurns,
+      blocks: importedTurns.flatMap((turn) => turn.blocks),
+      regions: [],
+      expanded: false,
+      createdAt: session.session.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      codexImport: {
+        sessionId: session.session.codexSessionId,
+        threadId: session.session.codexThreadId,
+        sourceFormat: session.sourceFormat,
+      },
+    }
+    const newEdges = connectStartAndEnd
+      ? [
+          { id: createId('edge_codex_session'), from: startNodeId, to: sessionNodeId, label: 'imported session' },
+          { id: createId('edge_codex_session'), from: sessionNodeId, to: endNodeId, label: 'imported session' },
+        ]
+      : []
     updateWorkspace((current) => ({
       ...current,
-      nodes: [...current.nodes, ...patch.nodes],
-      edges: [...current.edges, ...patch.edges],
+      nodes: [...current.nodes, sessionNode],
+      edges: [...current.edges, ...newEdges],
     }))
-    setSelectedNodeId(patch.nodes[0].id)
+    setSelectedNodeId(sessionNodeId)
     setSelectedEdgeId(null)
     setActiveBlockId(null)
-    setActiveDocumentId(null)
+    setActiveTextNodeId(null)
+    setActiveComplexChatId(sessionNodeId)
     setActiveImageId(null)
-    setImportNotice(`${sourceFileName} imported as ${session.turns.length} Codex Turn nodes.`)
-    setSaveToast(`Imported ${session.turns.length} Codex turns`)
+    setImportNotice(`${sourceFileName} imported as one Complex Chat with ${importedTurns.length} ${importedTurns.length === 1 ? 'turn' : 'turns'}.`)
+    setSaveToast(`Imported ${importedTurns.length} Codex turns`)
   }
 
   const undoWorkspace = () => {
@@ -1647,6 +1777,7 @@ export function App() {
     setSelectedEdgeId(null)
     setActiveBlockId(null)
     setActiveTextNodeId(isTextReviewNode(node) ? node.id : null)
+    setActiveComplexChatId(node.type === 'complex_chat' ? node.id : null)
     setActiveImageId(node.type === 'image' ? node.id : null)
   }
 
@@ -1664,6 +1795,7 @@ export function App() {
       edges: current.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId),
     }))
     if (activeTextNodeId === nodeId) setActiveTextNodeId(null)
+    if (activeComplexChatId === nodeId) setActiveComplexChatId(null)
     if (activeImageId === nodeId) setActiveImageId(null)
     if (selectedNodeId === nodeId) {
       const fallback = workspace.nodes.find((item) => item.id !== nodeId && item.type !== 'start' && item.type !== 'end') || workspace.nodes.find((item) => item.id === startNodeId)
@@ -1687,6 +1819,7 @@ export function App() {
     setSelectedEdgeId(null)
     setActiveBlockId(null)
     setActiveTextNodeId(null)
+    setActiveComplexChatId(null)
     setActiveImageId(null)
     setBundleDraft('')
     setBundleDraftEdited(false)
@@ -1786,6 +1919,7 @@ export function App() {
       setSelectedNodeId(startNodeId)
       setActiveBlockId(null)
       setActiveTextNodeId(null)
+      setActiveComplexChatId(null)
       setActiveImageId(null)
     }
   }
@@ -1859,6 +1993,10 @@ export function App() {
               ...node,
               updatedAt: new Date().toISOString(),
               blocks: node.blocks.map((block) => (block.id === blockId ? { ...block, ...patch } : block)),
+              turns: node.turns?.map((turn) => ({
+                ...turn,
+                blocks: turn.blocks.map((block) => (block.id === blockId ? { ...block, ...patch } : block)),
+              })),
             }
           : node,
       ),
@@ -1869,7 +2007,14 @@ export function App() {
     updateWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) =>
-        node.id === nodeId ? { ...node, updatedAt: new Date().toISOString(), blocks: node.blocks.filter((block) => block.id !== blockId) } : node,
+        node.id === nodeId
+          ? {
+              ...node,
+              updatedAt: new Date().toISOString(),
+              blocks: node.blocks.filter((block) => block.id !== blockId),
+              turns: node.turns?.map((turn) => ({ ...turn, blocks: turn.blocks.filter((block) => block.id !== blockId) })),
+            }
+          : node,
       ),
     }))
     if (activeBlockId === blockId) setActiveBlockId(null)
@@ -2070,6 +2215,7 @@ export function App() {
                       setSelectedNodeId(node.id)
                       setActiveBlockId(null)
                       setActiveTextNodeId(isTextReviewNode(node) ? node.id : null)
+                      setActiveComplexChatId(node.type === 'complex_chat' ? node.id : null)
                       setActiveImageId(node.type === 'image' ? node.id : null)
                     }}
                   >
@@ -2100,6 +2246,13 @@ export function App() {
                 onUpdateBlock={onUpdateBlock}
                 onDeleteBlock={onDeleteBlock}
                 onExit={() => setActiveTextNodeId(null)}
+              />
+            ) : activeComplexChat ? (
+              <ComplexChatWorkspace
+                node={activeComplexChat}
+                onUpdateBlock={onUpdateBlock}
+                onDeleteBlock={onDeleteBlock}
+                onExit={() => setActiveComplexChatId(null)}
               />
             ) : activeImage ? (
               <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onExit={() => setActiveImageId(null)} />

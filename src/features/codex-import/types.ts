@@ -154,6 +154,8 @@ export type CodexImportPayload = {
   patch: CodexCanvasPatch
   session: CodexSessionImport
   sourceFileName: string
+  splitTurns: boolean
+  connectStartAndEnd: boolean
 }
 
 export type CodexExportRequest = {
