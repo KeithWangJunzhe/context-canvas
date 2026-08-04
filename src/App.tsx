@@ -62,6 +62,7 @@ import {
 import { CodexImportLauncher, type CodexImportPayload } from './features/codex-import'
 import { sampleWorkspace } from './sample'
 import { BlockStatus, BlockTag, BuiltInBlockTag, ContextBlock, ContextEdge, ContextNode, ContextTurn, TextBoxShape, Workspace } from './types'
+import { useI18n, type Locale } from './i18n'
 
 const statusOptions: BlockStatus[] = ['included', 'excluded', 'pinned', 'needs_review']
 const tagOptions: BuiltInBlockTag[] = ['requirement', 'decision', 'assumption']
@@ -255,6 +256,7 @@ function countByStatus(node: ContextNode, status: BlockStatus) {
 
 function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
   const contextNode = data as ContextFlowData
+  const { t } = useI18n()
   const total = contextNode.blocks.length + contextNode.regions.length
   const isStart = contextNode.type === 'start'
   const isEnd = contextNode.type === 'end'
@@ -317,7 +319,7 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
         </div>
         <button className="node-mini-action nodrag nopan" onClick={() => contextNode.onOpenComplexChat?.(contextNode.id)}>
           <MessageSquareText size={13} />
-          Open turns
+          {t('complex.openTurns')}
         </button>
         <Handle type="source" position={Position.Right} />
       </div>
@@ -962,17 +964,18 @@ function ComplexChatWorkspace({
   onDeleteBlock: (nodeId: string, blockId: string) => void
 }) {
   const turns = node.turns || []
+  const { t } = useI18n()
   return (
     <div className="document-workspace complex-chat-workspace">
       <div className="workspace-header">
         <button className="secondary-button" onClick={onExit}>
           <ArrowLeft size={16} />
-          Save & exit
+          {t('complex.saveExit')}
         </button>
         <div>
           <div className="eyebrow">Complex Chat</div>
           <h2>{node.title}</h2>
-          <p>{turns.length} turns · {node.blocks.length} blocks · imported session remains read-only at source</p>
+          <p>{turns.length} turns · {node.blocks.length} blocks · {t('complex.sourceReadOnly')}</p>
         </div>
       </div>
       <div className="complex-chat-turn-list">
@@ -983,7 +986,7 @@ function ComplexChatWorkspace({
                 <span className="eyebrow">Turn {turn.sequence}</span>
                 <h3>{turn.title}</h3>
               </div>
-              <span className={`turn-status turn-${turn.status}`}>{turn.status.replace('_', ' ')}</span>
+              <span className={`turn-status turn-${turn.status}`}>{t(`complex.status.${turn.status}` as 'complex.status.completed' | 'complex.status.aborted' | 'complex.status.in_progress')}</span>
             </div>
             {turn.blocks.map((block) => (
               <BlockEditor
@@ -994,10 +997,10 @@ function ComplexChatWorkspace({
                 onDelete={() => onDeleteBlock(node.id, block.id)}
               />
             ))}
-            {turn.blocks.length === 0 && <p className="hint">No readable blocks in this turn.</p>}
+            {turn.blocks.length === 0 && <p className="hint">{t('complex.noBlocks')}</p>}
           </article>
         ))}
-        {turns.length === 0 && <div className="empty-state"><MessageSquareText size={22} /><h2>No turns imported</h2></div>}
+        {turns.length === 0 && <div className="empty-state"><MessageSquareText size={22} /><h2>{t('complex.noTurns')}</h2></div>}
       </div>
     </div>
   )
@@ -1548,7 +1551,35 @@ function NewCanvasModal({
   )
 }
 
+function SettingsModal({ locale, onLocaleChange, onClose }: { locale: Locale; onLocaleChange: (locale: Locale) => void; onClose: () => void }) {
+  const { t } = useI18n()
+  return (
+    <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div className="modal-header">
+          <div>
+            <h2 id="settings-title">{t('settings.title')}</h2>
+            <p>{t('settings.languageHint')}</p>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label={t('settings.close')}>x</button>
+        </div>
+        <label className="field">
+          <span>{t('settings.language')}</span>
+          <select value={locale} onChange={(event) => onLocaleChange(event.target.value as Locale)}>
+            <option value="en">{t('settings.english')}</option>
+            <option value="zh-CN">{t('settings.chinese')}</option>
+          </select>
+        </label>
+        <div className="modal-actions">
+          <button className="primary-button" onClick={onClose}>{t('settings.close')}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function App() {
+  const { locale, setLocale } = useI18n()
   const initialWorkspace = useMemo(() => loadStoredWorkspace() || withSystemNodes(sampleWorkspace), [])
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace)
   const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(initialWorkspace))
@@ -1559,6 +1590,7 @@ export function App() {
   const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showNewCanvas, setShowNewCanvas] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [importNotice, setImportNotice] = useState('')
   const [bundleDraft, setBundleDraft] = useState('')
@@ -2170,9 +2202,9 @@ export function App() {
             </button>
             <button
               className="icon-button"
-              onClick={() => setSaveToast('Settings coming later')}
-              title="Settings coming later"
-              aria-label="Settings coming later"
+              onClick={() => setShowSettings(true)}
+              title="Settings"
+              aria-label="Settings"
             >
               <Settings size={16} />
             </button>
@@ -2345,6 +2377,7 @@ export function App() {
             onImportFile={importFile}
           />
         )}
+        {showSettings && <SettingsModal locale={locale} onLocaleChange={setLocale} onClose={() => setShowSettings(false)} />}
         {showNewCanvas && <NewCanvasModal onClose={() => setShowNewCanvas(false)} onCreate={startNewCanvas} onDownloadAndCreate={downloadCurrentBundleAndStartNew} />}
       </div>
     </ReactFlowProvider>

@@ -4,6 +4,7 @@ import { createCodexExportRequest } from './exportPrompt'
 import { parseCodexRolloutJsonl } from './parseCodexRollout'
 import { buildCodexCanvasPatch } from './toCanvas'
 import type { CodexExportRequest, CodexImportPayload, CodexSessionImport } from './types'
+import { useI18n } from '../../i18n'
 import './codex-import.css'
 
 type CopyState = 'copying' | 'copied' | 'failed'
@@ -63,6 +64,7 @@ function CodexImportModal({
   onClose: () => void
   onImport: (payload: CodexImportPayload) => void
 } & Omit<CodexImportLauncherProps, 'onImport'>) {
+  const { locale, t } = useI18n()
   const [isDragging, setIsDragging] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [parsedFile, setParsedFile] = useState<ParsedFile | null>(null)
@@ -202,13 +204,6 @@ function CodexImportModal({
     })
   }
 
-  const copyMessage =
-    initialCopyState === 'copied'
-      ? '导出指令已复制。现在切换到要导入的 Codex 任务，粘贴并发送。'
-      : initialCopyState === 'copying'
-        ? '正在复制导出指令…'
-        : '浏览器没有自动复制，请点击右侧按钮复制。'
-
   return (
     <div
       className="codex-import-backdrop"
@@ -230,11 +225,11 @@ function CodexImportModal({
       <div ref={modalRef} className="modal codex-import-modal" role="dialog" aria-modal="true" aria-labelledby="codex-import-title">
         <div className="modal-header codex-import-header">
           <div>
-            <div className="eyebrow">Local Codex rollout</div>
-            <h2 id="codex-import-title">导入 Codex 会话</h2>
-            <p>无需 Hook 或后台服务。Codex 导出本地文件后，由浏览器在本机解析。</p>
+            <div className="eyebrow">{t('codex.eyebrow')}</div>
+            <h2 id="codex-import-title">{t('codex.title')}</h2>
+            <p>{t('codex.description')}</p>
           </div>
-          <button ref={closeButtonRef} className="icon-button" onClick={onClose} aria-label="关闭 Codex 导入">
+          <button ref={closeButtonRef} className="icon-button" onClick={onClose} aria-label={t('codex.close')}>
             <X size={16} />
           </button>
         </div>
@@ -243,30 +238,30 @@ function CodexImportModal({
           <span className="codex-copy-icon">
             {initialCopyState === 'copied' ? <Check size={17} /> : initialCopyState === 'copying' ? <LoaderCircle className="codex-spin" size={17} /> : <AlertCircle size={17} />}
           </span>
-          <span>{copyMessage}</span>
+          <span>{initialCopyState === 'copied' ? t('codex.copyCopied') : initialCopyState === 'copying' ? t('codex.copyCopying') : t('codex.copyFailed')}</span>
           <button className="secondary-button" onClick={() => void copyPrompt()}>
             <Copy size={15} />
-            {initialCopyState === 'copied' ? '重新复制' : '复制指令'}
+            {initialCopyState === 'copied' ? t('codex.copyAgain') : t('codex.copyInstruction')}
           </button>
         </div>
 
         <ol className="codex-import-steps">
           <li>
-            <strong>在目标 Codex 任务中发送指令</strong>
-            <span>Codex 会根据唯一标记定位当前 rollout，并原样导出指令之前的记录。</span>
+            <strong>{t('codex.stepOneTitle')}</strong>
+            <span>{t('codex.stepOneBody')}</span>
           </li>
           <li>
-            <strong>允许必要的本地文件权限</strong>
-            <span>如出现提示，请允许读取 <code>~/.codex/sessions</code> 和写入 <code>~/Downloads/Context Canvas Imports/</code>。</span>
+            <strong>{t('codex.stepTwoTitle')}</strong>
+            <span>{t('codex.stepTwoBody')}</span>
           </li>
           <li>
-            <strong>把生成的 .jsonl 文件拖到下方</strong>
-            <span>原会话文件不会被修改，内容不会上传。</span>
+            <strong>{t('codex.stepThreeTitle')}</strong>
+            <span>{t('codex.stepThreeBody')}</span>
           </li>
         </ol>
 
         <details className="codex-prompt-details">
-          <summary>查看导出指令与唯一标记</summary>
+          <summary>{t('codex.promptDetails')}</summary>
           <pre>{request.prompt}</pre>
         </details>
 
@@ -299,8 +294,8 @@ function CodexImportModal({
           aria-busy={isParsing}
         >
           {isParsing ? <LoaderCircle className="codex-spin" size={24} /> : <Upload size={24} />}
-          <strong>{isParsing ? '正在解析会话…' : '拖入 Codex 会话文件'}</strong>
-          <span>或点击选择 .jsonl 文件</span>
+          <strong>{isParsing ? t('codex.dropParsing') : t('codex.dropIdle')}</strong>
+          <span>{t('codex.dropHint')}</span>
           <input ref={fileInputRef} type="file" accept=".jsonl,application/x-ndjson" onChange={onFileInput} />
         </div>
 
@@ -312,7 +307,7 @@ function CodexImportModal({
         )}
 
         {parsedFile && (
-          <section className="codex-import-preview" aria-label="Codex 导入预览">
+          <section className="codex-import-preview" aria-label={t('codex.previewLabel')}>
             <div className="codex-preview-heading">
               <div>
                 <span className="codex-file-icon"><FileJson size={17} /></span>
@@ -321,26 +316,26 @@ function CodexImportModal({
               <span>{readableBytes(parsedFile.file.size)}</span>
             </div>
             <dl className="codex-preview-grid">
-              <div><dt>工作目录</dt><dd title={parsedFile.session.session.cwd}>{parsedFile.session.session.cwd || '未知'}</dd></div>
-              <div><dt>时间范围</dt><dd>{readableDate(parsedFile.session.stats.firstTimestamp)} → {readableDate(parsedFile.session.stats.lastTimestamp)}</dd></div>
-              <div><dt>用户 Turn</dt><dd>{parsedFile.session.stats.importedTurnCount}</dd></div>
-              <div><dt>Assistant 消息</dt><dd>{parsedFile.session.stats.assistantMessageCount}</dd></div>
-              <div><dt>子 Agent 消息</dt><dd>{parsedFile.session.stats.agentMessageCount}</dd></div>
-              <div><dt>工具调用</dt><dd>{parsedFile.session.stats.toolCallCount}</dd></div>
-              <div><dt>将创建</dt><dd>1 个 Complex Chat</dd></div>
+              <div><dt>{t('codex.workingDirectory')}</dt><dd title={parsedFile.session.session.cwd}>{parsedFile.session.session.cwd || (locale === 'zh-CN' ? '未知' : 'Unknown')}</dd></div>
+              <div><dt>{t('codex.timeRange')}</dt><dd>{readableDate(parsedFile.session.stats.firstTimestamp)} → {readableDate(parsedFile.session.stats.lastTimestamp)}</dd></div>
+              <div><dt>{t('codex.userTurns')}</dt><dd>{parsedFile.session.stats.importedTurnCount}</dd></div>
+              <div><dt>{t('codex.assistantMessages')}</dt><dd>{parsedFile.session.stats.assistantMessageCount}</dd></div>
+              <div><dt>{t('codex.agentMessages')}</dt><dd>{parsedFile.session.stats.agentMessageCount}</dd></div>
+              <div><dt>{t('codex.toolCalls')}</dt><dd>{parsedFile.session.stats.toolCallCount}</dd></div>
+              <div><dt>{t('codex.willCreate')}</dt><dd>1 Complex Chat</dd></div>
               <div>
-                <dt>导入边界</dt>
-                <dd>{parsedFile.session.boundary.kind === 'marker' ? '已按本次 marker 截断' : '已验证本次前缀导出文件'}</dd>
+                <dt>{t('codex.importBoundary')}</dt>
+                <dd>{parsedFile.session.boundary.kind === 'marker' ? t('codex.markerBoundary') : t('codex.prefixBoundary')}</dd>
               </div>
             </dl>
 
             <div className="codex-import-options">
-              <label><input type="checkbox" checked={choices.splitTurns} onChange={(event) => setChoices((current) => ({ ...current, splitTurns: event.target.checked }))} />按 Turn 切分（展开后显示）</label>
-              <label><input type="checkbox" checked={choices.includeCommentary} onChange={(event) => setChoices((current) => ({ ...current, includeCommentary: event.target.checked }))} />Assistant commentary</label>
-              <label><input type="checkbox" checked={choices.includeAgentMessages} onChange={(event) => setChoices((current) => ({ ...current, includeAgentMessages: event.target.checked }))} />子 Agent 消息</label>
-              <label><input type="checkbox" checked={choices.includeToolCalls} onChange={(event) => setChoices((current) => ({ ...current, includeToolCalls: event.target.checked }))} />工具调用</label>
-              <label><input type="checkbox" checked={choices.includeToolOutputs} onChange={(event) => setChoices((current) => ({ ...current, includeToolOutputs: event.target.checked }))} />工具输出</label>
-              <label><input type="checkbox" checked={choices.connectStartAndEnd} onChange={(event) => setChoices((current) => ({ ...current, connectStartAndEnd: event.target.checked }))} />连接 Start / End</label>
+              <label><input type="checkbox" checked={choices.splitTurns} onChange={(event) => setChoices((current) => ({ ...current, splitTurns: event.target.checked }))} />{t('codex.splitTurns')}</label>
+              <label><input type="checkbox" checked={choices.includeCommentary} onChange={(event) => setChoices((current) => ({ ...current, includeCommentary: event.target.checked }))} />{t('codex.includeCommentary')}</label>
+              <label><input type="checkbox" checked={choices.includeAgentMessages} onChange={(event) => setChoices((current) => ({ ...current, includeAgentMessages: event.target.checked }))} />{t('codex.includeAgentMessages')}</label>
+              <label><input type="checkbox" checked={choices.includeToolCalls} onChange={(event) => setChoices((current) => ({ ...current, includeToolCalls: event.target.checked }))} />{t('codex.includeToolCalls')}</label>
+              <label><input type="checkbox" checked={choices.includeToolOutputs} onChange={(event) => setChoices((current) => ({ ...current, includeToolOutputs: event.target.checked }))} />{t('codex.includeToolOutputs')}</label>
+              <label><input type="checkbox" checked={choices.connectStartAndEnd} onChange={(event) => setChoices((current) => ({ ...current, connectStartAndEnd: event.target.checked }))} />{t('codex.connectStartEnd')}</label>
             </div>
 
             {parsedFile.session.diagnostics.length > 0 && (
@@ -353,12 +348,12 @@ function CodexImportModal({
 
         <div className="codex-import-boundary-note">
           {parsedFile
-            ? '已验证导入边界：导出指令和 Codex 的导出回复不会进入 Canvas。工具及子 Agent 记录会标记为 needs review，不会自动进入 Bundle。'
-            : '选择文件后会核对本次唯一标记或导出文件名，确认导出指令位于导入范围之外。'}
+            ? t('codex.boundaryVerified')
+            : t('codex.boundaryWaiting')}
         </div>
 
         <div className="modal-actions codex-import-actions">
-          <button className="secondary-button" onClick={onClose}>取消</button>
+          <button className="secondary-button" onClick={onClose}>{t('codex.cancel')}</button>
           <button className="primary-button" disabled={!parsedFile || isParsing} onClick={confirmImport}>
             <Bot size={16} />
             {parsedFile ? '导入为 Complex Chat' : '等待会话文件'}
@@ -370,6 +365,7 @@ function CodexImportModal({
 }
 
 export function CodexImportLauncher({ startNodeId, endNodeId, createId, onImport }: CodexImportLauncherProps) {
+  const { locale } = useI18n()
   const [request, setRequest] = useState<CodexExportRequest | null>(null)
   const [copyState, setCopyState] = useState<CopyState>('copying')
   const launcherButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -382,7 +378,7 @@ export function CodexImportLauncher({ startNodeId, endNodeId, createId, onImport
   }, [restoreLauncherFocus])
 
   const openImport = () => {
-    const nextRequest = createCodexExportRequest()
+    const nextRequest = createCodexExportRequest(locale)
     setRequest(nextRequest)
     setCopyState('copying')
     void writeClipboard(nextRequest.prompt).then(
