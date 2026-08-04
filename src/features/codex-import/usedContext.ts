@@ -24,7 +24,7 @@ function kindForPath(path: string): CodexUsedContextCandidate['kind'] {
 }
 
 function isReadLikeTool(name: string) {
-  return /read|cat|open|file|document|image/i.test(name)
+  return /read|cat|open|file|document|image|exec|shell|terminal|command/i.test(name)
 }
 
 function itemOutput(items: CodexTurnItem[], callId: string) {
@@ -36,6 +36,11 @@ export function extractUsedContextCandidates(session: CodexSessionImport): Codex
   const candidates = new Map<string, CodexUsedContextCandidate>()
 
   for (const turn of session.turns) {
+    const callsById = new Map(
+      turn.items
+        .filter((item): item is Extract<CodexTurnItem, { kind: 'tool_call' }> => item.kind === 'tool_call')
+        .map((item) => [item.callId, item]),
+    )
     for (const item of turn.items) {
       const texts = item.kind === 'tool_call'
         ? [item.input]
@@ -48,7 +53,8 @@ export function extractUsedContextCandidates(session: CodexSessionImport): Codex
       for (const path of paths) {
         const key = path.toLowerCase()
         const existing = candidates.get(key)
-        const output = item.kind === 'tool_call' && isReadLikeTool(item.name) ? itemOutput(turn.items, item.callId) : undefined
+        const sourceCall = item.kind === 'tool_call' ? item : item.kind === 'tool_output' ? callsById.get(item.callId) : undefined
+        const output = sourceCall && isReadLikeTool(sourceCall.name) ? itemOutput(turn.items, sourceCall.callId) : undefined
         const next: CodexUsedContextCandidate = existing || {
           id: `used_context_${candidates.size + 1}`,
           path,
@@ -57,7 +63,7 @@ export function extractUsedContextCandidates(session: CodexSessionImport): Codex
           confidence: 'mentioned',
         }
         next.evidence = Array.from(new Set([...next.evidence, `Turn ${turn.sequenceIndex + 1} · ${item.kind === 'tool_call' ? item.name : 'message'}`]))
-        if (output && output.length > 0 && next.kind === 'document') {
+        if (output && output.length > 0 && next.kind === 'document' && output.length <= 250_000) {
           next.content = next.content || output
           next.confidence = 'observed'
         }
