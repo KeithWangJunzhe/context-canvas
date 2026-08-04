@@ -23,6 +23,7 @@ type ParsedFile = {
   file: File
   session: CodexSessionImport
   candidates: CodexUsedContextCandidate[]
+  isLegacy: boolean
 }
 
 type CodexImportLauncherProps = {
@@ -172,13 +173,11 @@ function CodexImportModal({
       }
       const markerSuffix = request.marker.replace('CONTEXT_CANVAS_EXPORT_', '').toLowerCase()
       const isCurrentPrefixExport = file.name.toLowerCase().includes(markerSuffix)
-      if (result.data.boundary.kind === 'eof' && !isCurrentPrefixExport) {
-        setError(t('ui.markerMismatch'))
-        return
-      }
+      const isLegacy = result.data.boundary.kind === 'eof' && !isCurrentPrefixExport
       const candidates = extractUsedContextCandidates(result.data)
-      setParsedFile({ file, session: result.data, candidates })
+      setParsedFile({ file, session: result.data, candidates, isLegacy })
       setSelectedCandidateIds(candidates.map((candidate) => candidate.id))
+      if (isLegacy) setError(t('codex.legacySessionWarning'))
     } catch (parseError) {
       if (requestId !== parseRequestRef.current) return
       const detail = parseError instanceof Error ? parseError.message : ''
@@ -349,7 +348,7 @@ function CodexImportModal({
               <div><dt>{t('codex.willCreate')}</dt><dd>1 Complex Chat</dd></div>
               <div>
                 <dt>{t('codex.importBoundary')}</dt>
-                <dd>{parsedFile.session.boundary.kind === 'marker' ? t('codex.markerBoundary') : t('codex.prefixBoundary')}</dd>
+                <dd>{parsedFile.isLegacy ? t('codex.legacyBoundary') : parsedFile.session.boundary.kind === 'marker' ? t('codex.markerBoundary') : t('codex.prefixBoundary')}</dd>
               </div>
             </dl>
 
@@ -404,7 +403,7 @@ function CodexImportModal({
 
         <div className="codex-import-boundary-note">
           {parsedFile
-            ? t('codex.boundaryVerified')
+            ? parsedFile.isLegacy ? t('codex.legacyBoundaryNote') : t('codex.boundaryVerified')
             : t('codex.boundaryWaiting')}
         </div>
 
@@ -412,7 +411,7 @@ function CodexImportModal({
           <button className="secondary-button" onClick={onClose}>{t('codex.cancel')}</button>
           <button className="primary-button" disabled={!parsedFile || isParsing} onClick={confirmImport}>
             <Bot size={16} />
-            {parsedFile ? t('codex.importComplex') : t('codex.waitingForFile')}
+            {parsedFile ? parsedFile.isLegacy ? t('codex.importLegacy') : t('codex.importComplex') : t('codex.waitingForFile')}
           </button>
         </div>
       </div>
