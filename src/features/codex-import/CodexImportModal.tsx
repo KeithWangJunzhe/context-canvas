@@ -3,7 +3,8 @@ import { AlertCircle, Bot, Check, Copy, FileJson, LoaderCircle, Upload, X } from
 import { createCodexExportRequest } from './exportPrompt'
 import { parseCodexRolloutJsonl } from './parseCodexRollout'
 import { buildCodexCanvasPatch } from './toCanvas'
-import type { CodexExportRequest, CodexImportDiagnostic, CodexImportPayload, CodexSessionImport } from './types'
+import { extractUsedContextCandidates } from './usedContext'
+import type { CodexExportRequest, CodexImportDiagnostic, CodexImportPayload, CodexSessionImport, CodexUsedContextCandidate } from './types'
 import { useI18n } from '../../i18n'
 import './codex-import.css'
 
@@ -21,6 +22,7 @@ type ImportChoices = {
 type ParsedFile = {
   file: File
   session: CodexSessionImport
+  candidates: CodexUsedContextCandidate[]
 }
 
 type CodexImportLauncherProps = {
@@ -85,6 +87,7 @@ function CodexImportModal({
   const [isDragging, setIsDragging] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [parsedFile, setParsedFile] = useState<ParsedFile | null>(null)
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([])
   const [error, setError] = useState('')
   const [choices, setChoices] = useState<ImportChoices>({
     splitTurns: true,
@@ -173,7 +176,9 @@ function CodexImportModal({
         setError(t('ui.markerMismatch'))
         return
       }
-      setParsedFile({ file, session: result.data })
+      const candidates = extractUsedContextCandidates(result.data)
+      setParsedFile({ file, session: result.data, candidates })
+      setSelectedCandidateIds(candidates.map((candidate) => candidate.id))
     } catch (parseError) {
       if (requestId !== parseRequestRef.current) return
       const detail = parseError instanceof Error ? parseError.message : ''
@@ -218,6 +223,7 @@ function CodexImportModal({
       sourceFileName: parsedFile.file.name,
       splitTurns: choices.splitTurns,
       connectStartAndEnd: choices.connectStartAndEnd,
+      usedContextCandidates: parsedFile.candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id)),
     })
   }
 
@@ -354,6 +360,38 @@ function CodexImportModal({
               <label><input type="checkbox" checked={choices.includeToolOutputs} onChange={(event) => setChoices((current) => ({ ...current, includeToolOutputs: event.target.checked }))} />{t('codex.includeToolOutputs')}</label>
               <label><input type="checkbox" checked={choices.connectStartAndEnd} onChange={(event) => setChoices((current) => ({ ...current, connectStartAndEnd: event.target.checked }))} />{t('codex.connectStartEnd')}</label>
             </div>
+
+            {parsedFile.candidates.length > 0 && (
+              <section className="codex-used-context" aria-label={t('codex.usedContextTitle')}>
+                <div className="codex-used-context-heading">
+                  <div>
+                    <strong>{t('codex.usedContextTitle')}</strong>
+                    <span>{t('codex.usedContextDescription')}</span>
+                  </div>
+                  <button
+                    className="text-button"
+                    onClick={() => setSelectedCandidateIds((current) => current.length === parsedFile.candidates.length ? [] : parsedFile.candidates.map((candidate) => candidate.id))}
+                  >
+                    {selectedCandidateIds.length === parsedFile.candidates.length ? t('codex.clearUsedContext') : t('codex.selectAllUsedContext')}
+                  </button>
+                </div>
+                <div className="codex-used-context-list">
+                  {parsedFile.candidates.map((candidate) => (
+                    <label key={candidate.id} className="codex-used-context-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedCandidateIds.includes(candidate.id)}
+                        onChange={(event) => setSelectedCandidateIds((current) => event.target.checked ? [...current, candidate.id] : current.filter((id) => id !== candidate.id))}
+                      />
+                      <span className="codex-used-context-copy">
+                        <strong title={candidate.path}>{candidate.path}</strong>
+                        <span>{candidate.confidence === 'observed' ? t('codex.contextReadFromRollout') : t('codex.contextPathOnly')}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {parsedFile.session.diagnostics.length > 0 && (
               <div className="codex-import-diagnostics">

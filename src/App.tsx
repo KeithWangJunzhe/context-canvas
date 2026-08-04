@@ -61,7 +61,7 @@ import {
   textBoxTitleFromBody,
   toggleTag,
 } from './domain'
-import { CodexImportLauncher, type CodexImportPayload } from './features/codex-import'
+import { CodexImportLauncher, type CodexImportPayload, type CodexUsedContextCandidate } from './features/codex-import'
 import { sampleWorkspace } from './sample'
 import { BlockStatus, BlockTag, BuiltInBlockTag, ContextBlock, ContextEdge, ContextNode, ContextTurn, TextBoxShape, Workspace } from './types'
 import { useI18n, type Locale } from './i18n'
@@ -1741,7 +1741,7 @@ export function App() {
     })
   }
 
-  const importCodexSession = ({ patch, session, sourceFileName, splitTurns, connectStartAndEnd }: CodexImportPayload) => {
+  const importCodexSession = ({ patch, session, sourceFileName, splitTurns, connectStartAndEnd, usedContextCandidates }: CodexImportPayload) => {
     if (patch.nodes.length === 0) return
     const sessionNodeId = createId('node_codex_session')
     const importedTurns: ContextTurn[] = splitTurns
@@ -1787,10 +1787,27 @@ export function App() {
           { id: createId('edge_codex_session'), from: sessionNodeId, to: endNodeId, label: 'imported session' },
         ]
       : []
+    const usedContextNodes = usedContextCandidates.flatMap((candidate: CodexUsedContextCandidate) => {
+      if (candidate.kind === 'document' && candidate.content) {
+        const fileName = candidate.path.split(/[\\/]/).pop() || candidate.path
+        return [createTextNode('document', sourceTitle(fileName), candidate.content, fileName, candidate.path)]
+      }
+      if (candidate.kind === 'image' && candidate.content?.startsWith('data:image/')) {
+        const fileName = candidate.path.split(/[\\/]/).pop() || candidate.path
+        return [createImageNode(sourceTitle(fileName), candidate.content, fileName, undefined, undefined, candidate.path)]
+      }
+      return []
+    })
+    const usedContextEdges = usedContextNodes.map((node) => ({
+      id: createId('edge_used_context'),
+      from: sessionNodeId,
+      to: node.id,
+      label: 'used context',
+    }))
     updateWorkspace((current) => ({
       ...current,
-      nodes: [...current.nodes, sessionNode],
-      edges: [...current.edges, ...newEdges],
+      nodes: [...current.nodes, sessionNode, ...usedContextNodes],
+      edges: [...current.edges, ...newEdges, ...usedContextEdges],
     }))
     setSelectedNodeId(sessionNodeId)
     setSelectedEdgeId(null)
@@ -1799,7 +1816,7 @@ export function App() {
     setActiveComplexChatId(sessionNodeId)
     setActiveImageId(null)
     setImportNotice(t('notice.importSummary', { file: sourceFileName, count: importedTurns.length }))
-    setSaveToast(importedTurns.length === 1 ? t('notice.importedOne') : t('notice.imported', { count: importedTurns.length }))
+    setSaveToast(t('ui.codexImportedWithContext', { count: usedContextNodes.length }))
   }
 
   const undoWorkspace = () => {

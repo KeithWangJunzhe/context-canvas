@@ -97,6 +97,15 @@ export type CodexSessionImport = {
   stats: CodexImportStats
 }
 
+export type CodexUsedContextCandidate = {
+  id: string
+  path: string
+  kind: 'document' | 'image' | 'unknown'
+  content?: string
+  evidence: string[]
+  confidence: 'observed' | 'mentioned'
+}
+
 export type ParseCodexRolloutOptions = {
   sourceFileName?: string
   cutoffMarker?: string
@@ -156,6 +165,7 @@ export type CodexImportPayload = {
   sourceFileName: string
   splitTurns: boolean
   connectStartAndEnd: boolean
+  usedContextCandidates: CodexUsedContextCandidate[]
 }
 
 export type CodexExportRequest = {

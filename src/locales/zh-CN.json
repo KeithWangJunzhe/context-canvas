@@ -46,6 +46,12 @@
   "codex.cancel": "取消",
   "codex.importComplex": "导入为 Complex Chat",
   "codex.waitingForFile": "等待会话文件",
+  "codex.usedContextTitle": "Agent 使用过的 Context",
+  "codex.usedContextDescription": "勾选 agent 读取或提到的 context。能从 rollout 读到正文的文件会生成并连接到 Complex Chat 节点。",
+  "codex.contextReadFromRollout": "rollout 中包含读取到的正文",
+  "codex.contextPathOnly": "只找到路径，rollout 未包含正文",
+  "codex.selectAllUsedContext": "全选",
+  "codex.clearUsedContext": "清空选择",
   "complex.eyebrow": "Complex Chat",
   "complex.saveExit": "保存并退出",
   "complex.sourceReadOnly": "导入的原始来源保持只读",
@@ -177,6 +183,7 @@
   ,"ui.fileReadError": "浏览器无法读取这个文件，请重新选择。"
   ,"ui.fileReadErrorDetail": "浏览器无法读取这个文件：{{detail}}"
   ,"ui.codexLauncher": "导入 Codex 会话"
+  ,"ui.codexImportedWithContext": "已导入 Complex Chat 和 {{count}} 个可读取的 context 节点"
   ,"ui.mammothNote": " Mammoth 提示：{{message}}"
   ,"ui.imageReadError": "{{file}} 无法作为图片读取：{{detail}} 原始文件未被修改。"
   ,"ui.docxNoText": "{{file}} 已添加，但 DOCX 解析器没有找到可读取的正文。原始文件未被修改。"

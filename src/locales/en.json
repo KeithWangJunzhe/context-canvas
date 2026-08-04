@@ -46,6 +46,12 @@
   "codex.cancel": "Cancel",
   "codex.importComplex": "Import as Complex Chat",
   "codex.waitingForFile": "Waiting for a session file",
+  "codex.usedContextTitle": "Used context candidates",
+  "codex.usedContextDescription": "Select context read or mentioned by the agent. Selected readable files become connected nodes.",
+  "codex.contextReadFromRollout": "Read content found in rollout",
+  "codex.contextPathOnly": "Path found; source content was not included",
+  "codex.selectAllUsedContext": "Select all",
+  "codex.clearUsedContext": "Clear selection",
   "complex.eyebrow": "Complex Chat",
   "complex.saveExit": "Save & exit",
   "complex.sourceReadOnly": "The imported source remains read-only",
@@ -177,6 +183,7 @@
   ,"ui.fileReadError": "The browser could not read this file. Please choose it again."
   ,"ui.fileReadErrorDetail": "The browser could not read this file: {{detail}}"
   ,"ui.codexLauncher": "Import Codex session"
+  ,"ui.codexImportedWithContext": "Imported Complex Chat and {{count}} readable context nodes"
   ,"ui.mammothNote": " Mammoth reported: {{message}}"
   ,"ui.imageReadError": "{{file}} could not be read as an image: {{detail}} The original file was not changed."
   ,"ui.docxNoText": "{{file}} was added, but the DOCX parser did not find readable body text. The original file was not changed."

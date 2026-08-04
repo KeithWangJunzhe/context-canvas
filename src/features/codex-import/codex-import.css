@@ -274,6 +274,93 @@
   font-size: 12px;
 }
 
+.codex-used-context {
+  display: grid;
+  gap: 9px;
+  padding: 11px 12px 12px;
+  border-top: 1px solid #eef1f4;
+  background: #f8fbff;
+}
+
+.codex-used-context-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.codex-used-context-heading strong,
+.codex-used-context-heading span {
+  display: block;
+}
+
+.codex-used-context-heading strong {
+  color: #26313b;
+  font-size: 12px;
+}
+
+.codex-used-context-heading span {
+  margin-top: 3px;
+  color: #69727d;
+  font-size: 11px;
+}
+
+.codex-used-context-list {
+  display: grid;
+  gap: 5px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.codex-used-context-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #d8e3ef;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.codex-used-context-item:hover {
+  border-color: #8ca7c8;
+}
+
+.codex-used-context-copy {
+  min-width: 0;
+}
+
+.codex-used-context-copy strong,
+.codex-used-context-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codex-used-context-copy strong {
+  color: #35404a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.codex-used-context-copy span {
+  margin-top: 3px;
+  color: #78838e;
+  font-size: 10px;
+}
+
+.text-button {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  color: #1f6feb;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+}
+
 .codex-import-diagnostics {
   display: grid;
   gap: 4px;
