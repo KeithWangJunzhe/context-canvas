@@ -225,6 +225,10 @@ export function textBoxTitleFromBody(body: string, fallbackTitle: string): strin
   return tokens.length > 5 ? `${title}...` : title
 }
 
+export function isTextBoxFallbackTitle(title: string, shape: TextBoxShape = 'rectangle'): boolean {
+  return new RegExp(`^${shape}_[0-9]+$`).test(title)
+}
+
 export function statusLabel(status: BlockStatus) {
   return status.replace('_', ' ')
 }

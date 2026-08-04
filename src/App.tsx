@@ -55,6 +55,7 @@ import {
   downloadText,
   generateBundleJson,
   generateBundleMarkdown,
+  isTextBoxFallbackTitle,
   sliceTextToBlocks,
   textBoxFallbackTitle,
   textBoxTitleFromBody,
@@ -292,7 +293,9 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           style={{ '--text-box-bg': contextNode.backgroundColor || textBoxBackgroundColors[0] } as CSSProperties}
         >
           <div className="text-box-content">
-            <span className="text-box-title">{contextNode.title}</span>
+            {!isTextBoxFallbackTitle(contextNode.title, contextNode.shape || 'rectangle') && (
+              <span className="text-box-title">{contextNode.title}</span>
+            )}
             <span className="text-box-body">{contextNode.body || t('ui.textBoxPlaceholder')}</span>
             {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
           </div>
