@@ -56,7 +56,6 @@ import {
   generateBundleJson,
   generateBundleMarkdown,
   sliceTextToBlocks,
-  statusLabel,
   toggleTag,
 } from './domain'
 import { CodexImportLauncher, type CodexImportPayload } from './features/codex-import'
@@ -178,12 +177,12 @@ function isDocxFile(file: File) {
   return /\.docx$/i.test(file.name) || file.type === docxMimeType
 }
 
-function formatMammothMessages(messages: Array<{ type?: string; message?: string }>) {
+function formatMammothMessages(messages: Array<{ type?: string; message?: string }>, formatMessage: (message: string) => string) {
   const readableMessages = messages
     .map((message) => message.message?.trim())
     .filter((message): message is string => Boolean(message))
   if (readableMessages.length === 0) return ''
-  return ` Mammoth reported: ${readableMessages.slice(0, 2).join(' ')}`
+  return formatMessage(readableMessages.slice(0, 2).join(' '))
 }
 
 async function extractDocxText(file: File) {
@@ -309,7 +308,7 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           <span className="node-title">{contextNode.title}</span>
         </div>
         <div className="node-meta">
-          <span>complex chat</span>
+          <span>Complex Chat</span>
           <span>{turns.length} turns</span>
         </div>
         <div className="status-strip">
@@ -356,8 +355,8 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           Slice
         </button>
       )}
-      {contextNode.type === 'bundle' && <div className="bundle-note">Exports active context</div>}
-      {isStart && <div className="bundle-note">Import or connect sources from here.</div>}
+      {contextNode.type === 'bundle' && <div className="bundle-note">{t('ui.exportsActive')}</div>}
+      {isStart && <div className="bundle-note">{t('ui.importOrConnect')}</div>}
       {isEnd && (
         <div className="end-node-controls nodrag nopan">
           <select
@@ -381,13 +380,14 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
 const nodeTypes = { context: ContextNodeCard }
 
 function CanvasToolbar({ onAddTextBox }: { onAddTextBox: (shape: TextBoxShape) => void }) {
+  const { t } = useI18n()
   return (
-    <div className="canvas-toolbar" aria-label="Insert canvas node">
-      <span className="canvas-toolbar-label">Insert</span>
+    <div className="canvas-toolbar" aria-label={t('ui.insertCanvasNode')}>
+      <span className="canvas-toolbar-label">{t('ui.insert')}</span>
       {textBoxShapes.map(({ value, label, icon: Icon }) => (
-        <button key={value} className="canvas-tool-button" onClick={() => onAddTextBox(value)} title={`Insert ${label}`} aria-label={`Insert ${label}`}>
+        <button key={value} className="canvas-tool-button" onClick={() => onAddTextBox(value)} title={`${t('ui.insert')} ${t(`ui.shape.${value}` as 'ui.shape.rectangle')}`} aria-label={`${t('ui.insert')} ${t(`ui.shape.${value}` as 'ui.shape.rectangle')}`}>
           <Icon size={15} />
-          <span>{label}</span>
+          <span>{t(`ui.shape.${value}` as 'ui.shape.rectangle')}</span>
         </button>
       ))}
     </div>
@@ -441,8 +441,9 @@ function ImportPanel({
   onAddText: (type: TextImportType, title: string, body: string) => void
   onImportFile: (file: File) => Promise<ImportResult>
 }) {
+  const { t } = useI18n()
   const [type, setType] = useState<TextImportType>('chat')
-  const [title, setTitle] = useState('Imported source')
+  const [title, setTitle] = useState(() => t('ui.importedSource'))
   const [body, setBody] = useState('')
   const [fileNotice, setFileNotice] = useState('')
 
@@ -471,37 +472,37 @@ function ImportPanel({
       <div className="modal">
         <div className="modal-header">
           <div>
-            <h2>Import Context</h2>
-            <p>Paste text, choose a local markdown/plain-text/docx file, or add a screenshot.</p>
+            <h2>{t('ui.importContext')}</h2>
+            <p>{t('ui.importDescription')}</p>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close import panel">
+          <button className="icon-button" onClick={onClose} aria-label={t('ui.closeImport')}>
             x
           </button>
         </div>
 
         <div className="segmented">
           <button className={type === 'chat' ? 'active' : ''} onClick={() => setType('chat')}>
-            Chat
+            {t('ui.chat')}
           </button>
           <button className={type === 'document' ? 'active' : ''} onClick={() => setType('document')}>
-            Document
+            {t('ui.document')}
           </button>
           <button className={type === 'note' ? 'active' : ''} onClick={() => setType('note')}>
-            Note
+            {t('ui.note')}
           </button>
         </div>
 
         <label className="field">
-          <span>Title</span>
+          <span>{t('ui.title')}</span>
           <input value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
 
         <label className="field">
-          <span>Source text</span>
+          <span>{t('ui.sourceText')}</span>
           <textarea
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder="Paste copied chat or notes here..."
+            placeholder={t('ui.pastePlaceholder')}
             rows={10}
           />
         </label>
@@ -510,12 +511,12 @@ function ImportPanel({
           <div className="import-file-actions">
             <label className="secondary-button file-picker">
               <FileText size={16} />
-              Add document
+              {t('ui.addDocument')}
               <input type="file" accept=".md,.markdown,.txt,.docx,text/markdown,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={onSourceFile} />
             </label>
             <label className="secondary-button file-picker">
               <ImageIcon size={16} />
-              Add image
+              {t('ui.addImage')}
               <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" onChange={onImage} />
             </label>
           </div>
@@ -523,12 +524,12 @@ function ImportPanel({
             className="primary-button"
             onClick={() => {
               if (!body.trim()) return
-              onAddText(type, title.trim() || 'Untitled source', body)
+              onAddText(type, title.trim() || t('ui.untitledSource'), body)
               onClose()
             }}
           >
             <Scissors size={16} />
-            Slice into blocks
+            {t('ui.sliceIntoBlocks')}
           </button>
         </div>
         {fileNotice && <div className="import-inline-warning">{fileNotice}</div>}
@@ -554,6 +555,7 @@ function MarkdownPreview({
   onDeleteBlock?: (blockId: string) => void
   variant?: 'panel' | 'workspace'
 }) {
+  const { t } = useI18n()
   const [selectedText, setSelectedText] = useState('')
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number } | null>(null)
   const fallbackBody = typeof node.body === 'string' ? node.body.trim() : ''
@@ -612,14 +614,14 @@ function MarkdownPreview({
     <section className={`panel-section md-reader-section ${variant === 'workspace' ? 'md-reader-workspace' : ''}`}>
       <div className="section-heading-row">
         <div>
-          <h3>{variant === 'workspace' ? node.title : 'Markdown Preview'}</h3>
-          <p>Select text in the preview, then mark it for the bundle. Source imports are read-only and will not be changed.</p>
+          <h3>{variant === 'workspace' ? node.title : t('ui.markdownPreview')}</h3>
+          <p>{t('ui.readerHint')}</p>
         </div>
         <span className="role-chip">{previewBlocks.length} blocks</span>
       </div>
 
       <div className="selection-toolbar">
-        <span>{selectedText ? `${Math.min(selectedText.length, 999)} chars selected` : 'No text selected'}</span>
+        <span>{selectedText ? `${Math.min(selectedText.length, 999)} ${t('ui.charsSelected')}` : t('ui.noTextSelected')}</span>
         <button disabled={!selectedText} onClick={() => addSelection('pinned')}>
           Pin
         </button>
@@ -649,8 +651,8 @@ function MarkdownPreview({
         {previewBlocks.length === 0 && (
           <div className="md-empty">
             <FileText size={22} />
-            <h4>No readable text was imported</h4>
-            <p>The file node was created, but no readable document text came through. Try importing again, or paste the document text directly.</p>
+            <h4>{t('ui.noReadableText')}</h4>
+            <p>{t('ui.noReadableTextBody')}</p>
           </div>
         )}
         {previewBlocks.map((block) => (
@@ -689,6 +691,7 @@ function DocumentWorkspace({
   onDeleteBlock: (nodeId: string, blockId: string) => void
   onExit: () => void
 }) {
+  const { t } = useI18n()
   const workspaceRef = useRef<HTMLDivElement | null>(null)
   const skipReaderAutoScrollRef = useRef(false)
 
@@ -732,9 +735,9 @@ function DocumentWorkspace({
       <div className="document-workspace-bar">
         <button className="secondary-button" onClick={onExit}>
           <ArrowLeft size={16} />
-          Save & Back
+          {t('ui.saveBack')}
         </button>
-        <span>Changes are saved in the workspace automatically.</span>
+        <span>{t('ui.changesAutosaved')}</span>
       </div>
       <MarkdownPreview
         node={node}
@@ -804,6 +807,7 @@ function MarkdownBlock({
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete?: () => void
 }) {
+  const { t } = useI18n()
   const text = block.text || ''
   const lines = text.split('\n')
   const firstLine = lines[0]?.trim() || ''
@@ -830,7 +834,7 @@ function MarkdownBlock({
           Ignore
         </button>
         {onDelete && (
-          <button className="danger-action" onClick={onDelete} aria-label="Delete block">
+          <button className="danger-action" onClick={onDelete} aria-label={t('ui.deleteBlock')}>
             <Trash2 size={13} />
           </button>
         )}
@@ -874,6 +878,7 @@ function BlockEditor({
   onUpdate: (patch: Partial<ContextBlock>) => void
   onDelete: () => void
 }) {
+  const { t } = useI18n()
   const [customTag, setCustomTag] = useState('')
   const setStatus = (status: BlockStatus) => onUpdate({ status: nextBlockStatus(block.status, status) })
   const addCustomTag = () => {
@@ -890,11 +895,11 @@ function BlockEditor({
         <select value={block.status} onChange={(event) => onUpdate({ status: event.target.value as BlockStatus })}>
           {statusOptions.map((status) => (
             <option key={status} value={status}>
-              {statusLabel(status)}
+              {t(`status.${status}` as 'status.included')}
             </option>
           ))}
         </select>
-        <button className="icon-button danger-action" onClick={onDelete} aria-label="Delete block">
+          <button className="icon-button danger-action" onClick={onDelete} aria-label={t('ui.deleteBlock')}>
           <Trash2 size={14} />
         </button>
       </div>
@@ -921,7 +926,7 @@ function BlockEditor({
           </button>
         ))}
         {customTags.map((tag) => (
-          <button key={tag} className="tag active" onClick={() => onUpdate({ tags: block.tags.filter((item) => item !== tag) })} title="Remove custom tag">
+          <button key={tag} className="tag active" onClick={() => onUpdate({ tags: block.tags.filter((item) => item !== tag) })} title={t('ui.removeCustomTag')}>
             {tag} x
           </button>
         ))}
@@ -936,7 +941,7 @@ function BlockEditor({
               addCustomTag()
             }
           }}
-          placeholder="Custom tag"
+          placeholder={t('ui.customTag')}
         />
         <button className="secondary-button" onClick={addCustomTag} disabled={!customTag.trim()}>
           Add tag
@@ -946,7 +951,7 @@ function BlockEditor({
         className="reason-input"
         value={block.reason || ''}
         onChange={(event) => onUpdate({ reason: event.target.value })}
-        placeholder="Reason or note..."
+        placeholder={t('ui.reasonNote')}
       />
     </div>
   )
@@ -1017,6 +1022,7 @@ function ImageInspector({
   variant?: 'panel' | 'workspace'
   zoom?: number
 }) {
+  const { t } = useI18n()
   const stageRef = useRef<HTMLDivElement | null>(null)
   const [tool, setTool] = useState<ImageTool>('bbox')
   const [color, setColor] = useState(imageAnnotationColors[0])
@@ -1075,21 +1081,21 @@ function ImageInspector({
         <div className="segmented compact">
           <button className={tool === 'bbox' ? 'active' : ''} onClick={() => setTool('bbox')}>
             <BoxSelect size={14} />
-            Box
+            {t('ui.box')}
           </button>
           <button className={tool === 'text' ? 'active' : ''} onClick={() => setTool('text')}>
             <Pilcrow size={14} />
-            Text
+            {t('ui.text')}
           </button>
         </div>
-        <div className="swatch-row" aria-label="Annotation color">
+        <div className="swatch-row" aria-label={t('ui.annotationColor')}>
           {imageAnnotationColors.map((item) => (
             <button
               key={item}
               className={item === color ? 'swatch active' : 'swatch'}
               style={{ backgroundColor: item }}
               onClick={() => setColor(item)}
-              aria-label={`Use color ${item}`}
+              aria-label={t('ui.useColor', { color: item })}
             />
           ))}
         </div>
@@ -1112,7 +1118,7 @@ function ImageInspector({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {node.imageUrl ? <img src={node.imageUrl} alt={node.title} draggable={false} onDragStart={(event) => event.preventDefault()} /> : <div className="empty-image">No image</div>}
+          {node.imageUrl ? <img src={node.imageUrl} alt={node.title} draggable={false} onDragStart={(event) => event.preventDefault()} /> : <div className="empty-image">{t('ui.noImage')}</div>}
           {node.regions.map((region) => (
             <div
               key={region.id}
@@ -1127,7 +1133,7 @@ function ImageInspector({
                 fontFamily: region.fontFamily,
               }}
             >
-              <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{region.label || (region.kind === 'text' ? 'Text' : 'region')}</span>
+              <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{region.label || (region.kind === 'text' ? t('ui.text') : t('ui.region'))}</span>
             </div>
           ))}
           {draft && (
@@ -1146,7 +1152,7 @@ function ImageInspector({
           )}
         </div>
       </div>
-      <p className="hint">{tool === 'bbox' ? 'Drag on the image to draw a bounding box.' : 'Click or drag on the image to place a text box.'}</p>
+      <p className="hint">{tool === 'bbox' ? t('ui.drawBbox') : t('ui.placeTextBox')}</p>
     </div>
   )
 }
@@ -1160,16 +1166,17 @@ function ImageWorkspace({
   onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
   onExit: () => void
 }) {
+  const { t } = useI18n()
   const [zoom, setZoom] = useState(140)
   return (
     <div className="document-workspace image-workspace">
       <div className="document-workspace-bar">
         <button className="secondary-button" onClick={onExit}>
           <ArrowLeft size={16} />
-          Save & Back
+          {t('ui.saveBack')}
         </button>
         <label className="zoom-control">
-          <span>Zoom {zoom}%</span>
+          <span>{t('ui.zoom', { zoom })}</span>
           <input type="range" min={100} max={240} step={10} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} />
         </label>
       </div>
@@ -1217,6 +1224,7 @@ function Inspector({
   onOpenTextWorkspace: (nodeId: string) => void
   onOpenImageWorkspace: (nodeId: string) => void
 }) {
+  const { t } = useI18n()
   const [blockFilter, setBlockFilter] = useState<BlockFilter>('all')
   const inspectorRef = useRef<HTMLElement | null>(null)
 
@@ -1236,23 +1244,23 @@ function Inspector({
           <input value={edge.label} onChange={(event) => onUpdateEdge(edge.id, { label: event.target.value })} />
         </div>
         <section className="panel-section">
-          <h3>Connection</h3>
+          <h3>{t('ui.connection')}</h3>
           <div className="edge-editor">
             <div>
-              <span>From</span>
+              <span>{t('ui.from')}</span>
               <strong>{edgeFrom?.title || edge.from}</strong>
             </div>
             <div>
-              <span>To</span>
+              <span>{t('ui.to')}</span>
               <strong>{edgeTo?.title || edge.to}</strong>
             </div>
             <label className="field">
-              <span>Label</span>
-              <input value={edge.label} onChange={(event) => onUpdateEdge(edge.id, { label: event.target.value })} placeholder="related" />
+              <span>{t('ui.label')}</span>
+              <input value={edge.label} onChange={(event) => onUpdateEdge(edge.id, { label: event.target.value })} placeholder={t('ui.related')} />
             </label>
             <button className="secondary-button danger-action wide" onClick={() => onDeleteEdge(edge.id)}>
               <Trash2 size={16} />
-              Delete connection
+              {t('ui.deleteConnection')}
             </button>
           </div>
         </section>
@@ -1265,8 +1273,8 @@ function Inspector({
       <aside className="inspector">
         <div className="empty-state">
           <MousePointer2 size={22} />
-          <h2>Select a node</h2>
-          <p>Use the canvas to inspect sources, edit blocks, and prepare a bundle.</p>
+          <h2>{t('ui.selectNode')}</h2>
+          <p>{t('ui.selectNodeBody')}</p>
         </div>
       </aside>
     )
@@ -1294,7 +1302,7 @@ function Inspector({
       {isTextReviewNode(node) && (
         <button className="secondary-button wide" onClick={() => onOpenTextWorkspace(node.id)}>
           <Maximize2 size={16} />
-          Review text
+          {t('ui.reviewText')}
         </button>
       )}
 
@@ -1302,7 +1310,7 @@ function Inspector({
         <>
           <button className="secondary-button wide" onClick={() => onOpenImageWorkspace(node.id)}>
             <Maximize2 size={16} />
-            Zoom edit
+            {t('ui.zoomEdit')}
           </button>
           <ImageInspector node={node} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />
         </>
@@ -1310,9 +1318,9 @@ function Inspector({
 
       {node.type === 'text_box' && (
         <section className="panel-section text-box-inspector">
-          <h3>Text box node</h3>
+          <h3>{t('ui.textBoxNode')}</h3>
           <label className="field">
-            <span>Background color</span>
+            <span>{t('ui.backgroundColor')}</span>
             <div className="region-style-row">
               {textBoxBackgroundColors.map((color) => (
                 <button
@@ -1320,40 +1328,40 @@ function Inspector({
                   className={color === (node.backgroundColor || textBoxBackgroundColors[0]) ? 'swatch active' : 'swatch'}
                   style={{ backgroundColor: color }}
                   onClick={() => onUpdateNode(node.id, { backgroundColor: color })}
-                  aria-label={`Use background color ${color}`}
+                  aria-label={t('ui.useColor', { color })}
                 />
               ))}
             </div>
           </label>
           <label className="field">
-            <span>Shape</span>
+            <span>{t('ui.shape')}</span>
             <select value={node.shape || 'rectangle'} onChange={(event) => onUpdateNode(node.id, { shape: event.target.value as TextBoxShape })}>
               {textBoxShapes.map(({ value, label }) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(`ui.shape.${value}` as 'ui.shape.rectangle')}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            <span>Shape meaning (optional)</span>
+            <span>{t('ui.shapeMeaning')}</span>
             <input
               value={node.shapeMeaning || ''}
               onChange={(event) => onUpdateNode(node.id, { shapeMeaning: event.target.value })}
-              placeholder="e.g. decision, database, information"
+              placeholder={t('ui.shapeMeaningPlaceholder')}
             />
           </label>
           <label className="field">
-            <span>Text</span>
+            <span>{t('ui.text')}</span>
             <textarea value={node.body || ''} onChange={(event) => onUpdateNode(node.id, { body: event.target.value })} rows={5} />
           </label>
-          <p className="hint">The shape is visual shorthand. The optional meaning is included in structured output as a helper field.</p>
+          <p className="hint">{t('ui.shapeHint')}</p>
         </section>
       )}
 
       {node.regions.length > 0 && (
         <section className="panel-section">
-          <h3>Image Regions</h3>
+          <h3>{t('ui.imageRegions')}</h3>
           {node.regions.map((region) => (
             <div className={`block-card status-${region.status}`} key={region.id}>
               <div className="block-toolbar">
@@ -1361,11 +1369,11 @@ function Inspector({
                 <select value={region.status} onChange={(event) => onUpdateRegion(node.id, region.id, { status: event.target.value as BlockStatus })}>
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
-                      {statusLabel(status)}
+                      {t(`status.${status}` as 'status.included')}
                     </option>
                   ))}
                 </select>
-                <button className="icon-button danger-action" onClick={() => onDeleteRegion(node.id, region.id)} aria-label="Delete image annotation">
+                <button className="icon-button danger-action" onClick={() => onDeleteRegion(node.id, region.id)} aria-label={t('ui.deleteAnnotation')}>
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -1376,7 +1384,7 @@ function Inspector({
                     className={item === (region.color || imageAnnotationColors[0]) ? 'swatch active' : 'swatch'}
                     style={{ backgroundColor: item }}
                     onClick={() => onUpdateRegion(node.id, region.id, { color: item })}
-                    aria-label={`Use color ${item}`}
+                    aria-label={t('ui.useColor', { color: item })}
                   />
                 ))}
               </div>
@@ -1389,8 +1397,8 @@ function Inspector({
                   ))}
                 </select>
               )}
-              <input value={region.label} onChange={(event) => onUpdateRegion(node.id, region.id, { label: event.target.value })} placeholder="Label" />
-              <textarea value={region.note} onChange={(event) => onUpdateRegion(node.id, region.id, { note: event.target.value })} placeholder="Region note" />
+              <input value={region.label} onChange={(event) => onUpdateRegion(node.id, region.id, { label: event.target.value })} placeholder={t('ui.label')} />
+              <textarea value={region.note} onChange={(event) => onUpdateRegion(node.id, region.id, { note: event.target.value })} placeholder={t('ui.regionNote')} />
             </div>
           ))}
         </section>
@@ -1399,8 +1407,8 @@ function Inspector({
       {node.type === 'start' && (
         <div className="empty-state">
           <Play size={22} />
-          <h2>Start Node</h2>
-          <p>This is the default entry point for source context. New imports stay unconnected until you decide how the canvas should flow.</p>
+          <h2>{t('ui.startNode')}</h2>
+          <p>{t('ui.startNodeBody')}</p>
         </div>
       )}
 
@@ -1408,20 +1416,20 @@ function Inspector({
         <section className="panel-section">
           <div className="section-heading-row compact-heading">
             <div>
-              <h3>{node.type === 'document' ? 'Structured Blocks' : 'Blocks'}</h3>
+              <h3>{node.type === 'document' ? t('ui.structuredBlocks') : t('ui.blocks')}</h3>
               <p className="hint">{orderedBlocks.length} shown / {node.blocks.length} total</p>
             </div>
             <select className="block-filter" value={blockFilter} onChange={(event) => setBlockFilter(event.target.value as BlockFilter)}>
-              <option value="all">all</option>
+              <option value="all">{t('ui.all')}</option>
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
-                  {statusLabel(status)}
+                    {t(`status.${status}` as 'status.included')}
                 </option>
               ))}
             </select>
           </div>
           {node.type === 'document' && (
-            <p className="hint">Preview and selection live in the center reader. This panel edits the structured blocks that feed the bundle.</p>
+            <p className="hint">{t('ui.readerBlockHint')}</p>
           )}
           {orderedBlocks.map((block) => (
             <BlockEditor
@@ -1433,23 +1441,23 @@ function Inspector({
               onDelete={() => onDeleteBlock(node.id, block.id)}
             />
           ))}
-          {orderedBlocks.length === 0 && <p className="hint">No blocks match this filter.</p>}
+          {orderedBlocks.length === 0 && <p className="hint">{t('ui.noMatchingBlocks')}</p>}
         </section>
       )}
 
       {node.type === 'bundle' && (
         <div className="empty-state">
           <Archive size={22} />
-          <h2>Bundle Node</h2>
-          <p>This node represents the current output package. Use the preview panel to inspect what Codex will see.</p>
+          <h2>{t('ui.bundleNode')}</h2>
+          <p>{t('ui.bundleNodeBody')}</p>
         </div>
       )}
 
       {node.type === 'end' && (
         <div className="empty-state">
           <Flag size={22} />
-          <h2>End Node</h2>
-          <p>This is the default output point. Use its canvas controls or the top Bundle button to export the current bundle.</p>
+          <h2>{t('ui.endNode')}</h2>
+          <p>{t('ui.endNodeBody')}</p>
         </div>
       )}
     </aside>
@@ -1471,27 +1479,28 @@ function BundlePreview({
   onDraftChange: (value: string) => void
   onReset: () => void
 }) {
+  const { t } = useI18n()
   const [mode, setMode] = useState<'edit' | 'generated'>('edit')
 
   return (
     <aside className="bundle-preview">
       <div className="preview-header">
         <div>
-          <div className="eyebrow">Output / Use</div>
-          <h2>Bundle Preview</h2>
+          <div className="eyebrow">{t('ui.outputUse')}</div>
+          <h2>{t('ui.bundlePreview')}</h2>
         </div>
         <Link size={16} />
       </div>
       <div className="preview-mode-row">
         <span className="preview-format">{format}</span>
-        <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')}>
-          Edit
+          <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')}>
+          {t('ui.edit')}
         </button>
         <button className={mode === 'generated' ? 'active' : ''} onClick={() => setMode('generated')}>
-          Generated
+          {t('ui.generated')}
         </button>
         <button disabled={!isDirty} onClick={onReset}>
-          Reset
+          {t('ui.reset')}
         </button>
       </div>
       {mode === 'edit' ? (
@@ -1517,32 +1526,33 @@ function NewCanvasModal({
   onDownloadAndCreate: () => void
   onCreate: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="modal-backdrop">
       <div className="modal confirm-modal">
         <div className="modal-header">
           <div>
-            <h2>Start a New Canvas?</h2>
-            <p>This clears the current workspace view and saves the new empty canvas locally.</p>
+            <h2>{t('ui.newCanvas')}</h2>
+            <p>{t('ui.newCanvasBody')}</p>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close new canvas dialog">
+          <button className="icon-button" onClick={onClose} aria-label={t('ui.closeDialog')}>
             x
           </button>
         </div>
         <div className="confirm-copy">
-          <p>Download the current bundle first if you want to keep the output from this canvas.</p>
+          <p>{t('ui.downloadFirst')}</p>
         </div>
         <div className="modal-actions">
           <button className="secondary-button" onClick={onClose}>
-            Cancel
+            {t('ui.cancel')}
           </button>
           <div className="confirm-actions">
             <button className="secondary-button danger-action" onClick={onCreate}>
-              New without download
+              {t('ui.newWithoutDownload')}
             </button>
             <button className="primary-button" onClick={onDownloadAndCreate}>
               <Download size={16} />
-              Download bundle & new
+              {t('ui.downloadBundleNew')}
             </button>
           </div>
         </div>
@@ -1579,7 +1589,7 @@ function SettingsModal({ locale, onLocaleChange, onClose }: { locale: Locale; on
 }
 
 export function App() {
-  const { locale, setLocale } = useI18n()
+  const { locale, setLocale, t } = useI18n()
   const initialWorkspace = useMemo(() => loadStoredWorkspace() || withSystemNodes(sampleWorkspace), [])
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace)
   const [flowNodes, setFlowNodes] = useState<ContextFlowNode[]>(() => makeFlowNodes(initialWorkspace))
@@ -1596,7 +1606,7 @@ export function App() {
   const [bundleDraft, setBundleDraft] = useState('')
   const [bundleDraftEdited, setBundleDraftEdited] = useState(false)
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
-  const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? 'Loaded local workspace' : 'Autosave ready'))
+  const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? t('ui.loadedLocal') : t('ui.autosaveReady')))
   const [saveToast, setSaveToast] = useState('')
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
@@ -1631,7 +1641,7 @@ export function App() {
   }, [generatedOutput, bundleDraftEdited])
 
   useEffect(() => {
-    setSaveNotice(saveStoredWorkspace(withSystemNodes(workspace)) ? 'Saved locally' : 'Local save failed')
+    setSaveNotice(saveStoredWorkspace(withSystemNodes(workspace)) ? t('ui.savedLocally') : t('ui.localSaveFailed'))
   }, [workspace])
 
   useEffect(() => {
@@ -1779,8 +1789,8 @@ export function App() {
     setActiveTextNodeId(null)
     setActiveComplexChatId(sessionNodeId)
     setActiveImageId(null)
-    setImportNotice(`${sourceFileName} imported as one Complex Chat with ${importedTurns.length} ${importedTurns.length === 1 ? 'turn' : 'turns'}.`)
-    setSaveToast(`Imported ${importedTurns.length} Codex turns`)
+    setImportNotice(t('notice.importSummary', { file: sourceFileName, count: importedTurns.length }))
+    setSaveToast(importedTurns.length === 1 ? t('notice.importedOne') : t('notice.imported', { count: importedTurns.length }))
   }
 
   const undoWorkspace = () => {
@@ -1815,7 +1825,7 @@ export function App() {
 
   const addTextBox = (shape: TextBoxShape) => {
     addNode(createTextBoxNode(shape))
-    setSaveToast(`${textBoxShapes.find((item) => item.value === shape)?.label || 'Text box'} added`)
+    setSaveToast(t('ui.textBoxAdded', { shape: t(`ui.shape.${shape}` as 'ui.shape.rectangle') }))
   }
 
   const deleteSource = (nodeId: string) => {
@@ -1838,8 +1848,8 @@ export function App() {
   const saveWorkspaceLocally = () => {
     const ok = saveStoredWorkspace(withSystemNodes(workspace))
     if (ok) historyFutureRef.current = []
-    setSaveNotice(ok ? 'Saved locally' : 'Local save failed')
-    setSaveToast(ok ? 'Saved successfully' : 'Local save failed')
+    setSaveNotice(ok ? 'Saved locally' : t('ui.localSaveFailed'))
+    setSaveToast(ok ? t('ui.savedSuccessfully') : t('ui.localSaveFailed'))
   }
 
   const startNewCanvas = () => {
@@ -1857,7 +1867,7 @@ export function App() {
     setBundleDraftEdited(false)
     setImportNotice('')
     setShowNewCanvas(false)
-    setSaveToast('New canvas ready')
+    setSaveToast(t('ui.newCanvasReady'))
   }
 
   const downloadCurrentBundleAndStartNew = () => {
@@ -1874,7 +1884,7 @@ export function App() {
         return { ok: true }
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'Unknown image read error.'
-        const notice = `${file.name} could not be read as an image: ${detail} The original file was not changed.`
+        const notice = t('ui.imageReadError', { file: file.name, detail })
         setImportNotice(notice)
         return { ok: false, notice }
       }
@@ -1883,19 +1893,19 @@ export function App() {
     if (isDocxFile(file)) {
       try {
         const { text, messages } = await extractDocxText(file)
-        const messageNote = formatMammothMessages(messages)
+        const messageNote = formatMammothMessages(messages, (message) => t('ui.mammothNote', { message }))
         if (!text) {
-          const notice = `${file.name} was added, but the docx parser did not find readable body text.${messageNote} The original file was not changed.`
+          const notice = `${t('ui.docxNoText', { file: file.name })}${messageNote}`
           setImportNotice(notice)
           addNode(createTextNode('document', sourceTitle(file.name), '', file.name, sourcePath(file)))
           return { ok: true, notice }
         }
-        if (messageNote) setImportNotice(`${file.name} imported with parser notes.${messageNote}`)
+        if (messageNote) setImportNotice(t('ui.docxParserNotes', { file: file.name, notes: messageNote }))
         addNode(createTextNode('document', sourceTitle(file.name), text, file.name, sourcePath(file)))
         return { ok: true }
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'Unknown parser error.'
-        const notice = `${file.name} could not be imported as .docx: ${detail} The original file was not changed.`
+        const notice = t('ui.docxImportError', { file: file.name, detail })
         setImportNotice(notice)
         return { ok: false, notice }
       }
@@ -1905,7 +1915,7 @@ export function App() {
       try {
         const text = await file.text()
         if (!text.trim()) {
-          const notice = `${file.name} was added, but no readable text came through. The original file was not changed.`
+          const notice = t('ui.emptyText', { file: file.name })
           setImportNotice(notice)
           addNode(createTextNode('document', sourceTitle(file.name), text, file.name, sourcePath(file)))
           return { ok: true, notice }
@@ -1914,13 +1924,13 @@ export function App() {
         return { ok: true }
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'Unknown text read error.'
-        const notice = `${file.name} could not be read as text: ${detail} The original file was not changed.`
+        const notice = t('ui.textReadError', { file: file.name, detail })
         setImportNotice(notice)
         return { ok: false, notice }
       }
     }
 
-    const notice = `${file.name} is not a supported import type yet. Use markdown, txt, docx, png, jpeg, or jpg.`
+    const notice = t('ui.unsupportedFile', { file: file.name })
     setImportNotice(notice)
     return { ok: false, notice }
   }
@@ -2132,7 +2142,7 @@ export function App() {
     let nextCount = 0
     const target = workspace.nodes.find((node) => node.id === nodeId)
     if (!target || !['chat', 'document', 'note'].includes(target.type) || typeof target.body !== 'string' || !target.body.trim()) {
-      setSaveToast('Nothing to slice')
+      setSaveToast(t('ui.nothingToSlice'))
       return
     }
 
@@ -2152,7 +2162,7 @@ export function App() {
       }),
     }))
     setActiveBlockId(null)
-    setSaveToast(`Re-sliced into ${nextCount} blocks`)
+    setSaveToast(t('ui.resliced', { count: nextCount }))
   }
 
   resliceNodeRef.current = resliceNode
@@ -2172,13 +2182,13 @@ export function App() {
         }}
         onDrop={onDropFiles}
       >
-        {saveToast && <div className={saveToast.includes('failed') ? 'save-toast is-error' : 'save-toast'}>{saveToast}</div>}
+        {saveToast && <div className={saveToast === t('ui.localSaveFailed') ? 'save-toast is-error' : 'save-toast'}>{saveToast}</div>}
         {isDraggingFile && (
           <div className="drop-overlay">
             <div>
               <FileText size={26} />
-              <strong>Drop markdown, text, docx, png, jpeg, or jpg files</strong>
-              <span>Local files become canvas nodes immediately.</span>
+              <strong>{t('ui.dropFiles')}</strong>
+              <span>{t('ui.localFilesImmediate')}</span>
             </div>
           </div>
         )}
@@ -2190,42 +2200,42 @@ export function App() {
           <div className="toolbar">
             <button className="secondary-button" onClick={() => setShowImport(true)}>
               <Plus size={16} />
-              Import
+              {t('ui.import')}
             </button>
             <button className="secondary-button" onClick={saveWorkspaceLocally}>
               <HardDrive size={16} />
-              Save local
+              {t('ui.saveLocal')}
             </button>
             <button className="secondary-button" onClick={() => setShowNewCanvas(true)}>
               <Plus size={16} />
-              New canvas
+              {t('ui.newCanvasButton')}
             </button>
             <button
               className="icon-button"
               onClick={() => setShowSettings(true)}
-              title="Settings"
-              aria-label="Settings"
+              title={t('ui.settings')}
+              aria-label={t('ui.settings')}
             >
               <Settings size={16} />
             </button>
-            <button className="icon-button" onClick={undoWorkspace} disabled={historyPastRef.current.length === 0} aria-label="Undo">
+            <button className="icon-button" onClick={undoWorkspace} disabled={historyPastRef.current.length === 0} aria-label={t('ui.undo')}>
               <Undo2 size={16} />
             </button>
-            <button className="icon-button" onClick={redoWorkspace} disabled={historyFutureRef.current.length === 0} aria-label="Redo">
+            <button className="icon-button" onClick={redoWorkspace} disabled={historyFutureRef.current.length === 0} aria-label={t('ui.redo')}>
               <Redo2 size={16} />
             </button>
             <button className="secondary-button" onClick={() => downloadText('context-workspace.json', JSON.stringify(workspace, null, 2), 'application/json')}>
               <Download size={16} />
-              Export workspace
+              {t('ui.exportWorkspace')}
             </button>
             <span className="save-status">{saveNotice}</span>
-            <select className="toolbar-select" value={outputFormat} onChange={(event) => changeOutputFormat(event.target.value as OutputFormat)} aria-label="Bundle output format">
+            <select className="toolbar-select" value={outputFormat} onChange={(event) => changeOutputFormat(event.target.value as OutputFormat)} aria-label={t('ui.bundleFormat')}>
               <option value="md">md</option>
               <option value="json">json</option>
             </select>
             <button className="primary-button" onClick={downloadBundle}>
               <Download size={16} />
-              Bundle .{outputFormat}
+              {t('ui.bundle')} .{outputFormat}
             </button>
           </div>
         </header>
@@ -2233,8 +2243,8 @@ export function App() {
         <main className="workbench">
           <aside className="source-rail">
             <div className="rail-header">
-              <h2>Sources</h2>
-              <button className="icon-button" onClick={() => setShowImport(true)} aria-label="Add source">
+              <h2>{t('ui.sources')}</h2>
+              <button className="icon-button" onClick={() => setShowImport(true)} aria-label={t('ui.addSource')}>
                 <Plus size={16} />
               </button>
             </div>
@@ -2254,7 +2264,7 @@ export function App() {
                     <span className="node-icon">{nodeIcon(node.type)}</span>
                     <span>{node.title}</span>
                   </button>
-                  <button className="source-delete" onClick={() => deleteSource(node.id)} aria-label={`Delete ${node.title}`}>
+                  <button className="source-delete" onClick={() => deleteSource(node.id)} aria-label={t('ui.deleteSource', { title: node.title })}>
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -2263,7 +2273,7 @@ export function App() {
             <CodexImportLauncher startNodeId={startNodeId} endNodeId={endNodeId} createId={createId} onImport={importCodexSession} />
             <div className="rail-callout">
               <Sparkles size={16} />
-              <span>Auto orchestration later. For now, you make the context calls.</span>
+              <span>{t('ui.autoLater')}</span>
             </div>
             {importNotice && <div className="rail-warning">{importNotice}</div>}
           </aside>

@@ -21,6 +21,7 @@ This directory is the project's working knowledge base. Product decisions live s
 | [`ENGINEERING_EVALUATION.md`](ENGINEERING_EVALUATION.md) | Early technical feasibility and technology choices / 前期技术可行性和技术选型 |
 | [`FEASIBILITY.md`](FEASIBILITY.md) | Feasibility research and risk assessment / 可行性研究和风险评估 |
 | [`PROJECT_OPERATING_MODEL.md`](PROJECT_OPERATING_MODEL.md) | Working model for Codex, contributors, branches, and agents / Codex、贡献者、分支和 agent 的协作方式 |
+| [`LOCALIZATION.md`](LOCALIZATION.md) | Translation catalog structure and contributor workflow / 本地化模板结构和贡献流程 |
 
 ## Ideas / 想法
 

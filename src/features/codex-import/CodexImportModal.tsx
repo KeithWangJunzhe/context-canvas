@@ -3,7 +3,7 @@ import { AlertCircle, Bot, Check, Copy, FileJson, LoaderCircle, Upload, X } from
 import { createCodexExportRequest } from './exportPrompt'
 import { parseCodexRolloutJsonl } from './parseCodexRollout'
 import { buildCodexCanvasPatch } from './toCanvas'
-import type { CodexExportRequest, CodexImportPayload, CodexSessionImport } from './types'
+import type { CodexExportRequest, CodexImportDiagnostic, CodexImportPayload, CodexSessionImport } from './types'
 import { useI18n } from '../../i18n'
 import './codex-import.css'
 
@@ -41,6 +41,23 @@ function readableDate(value?: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString()
+}
+
+function diagnosticText(diagnostic: CodexImportDiagnostic, locale: 'en' | 'zh-CN', translate: (key: any, values?: Record<string, string | number>) => string) {
+  if (locale === 'zh-CN') return diagnostic.message
+  const supportedCodes = new Set([
+    'TRAILING_PARTIAL_LINE',
+    'INVALID_JSON_LINE',
+    'CORRUPT_JSONL',
+    'EMPTY_FILE',
+    'AMBIGUOUS_MARKER',
+    'MARKER_NOT_FOUND',
+    'SESSION_ID_MISSING',
+    'MULTIPLE_SESSIONS',
+    'NO_USER_TURNS',
+  ])
+  if (!supportedCodes.has(diagnostic.code)) return diagnostic.message
+  return translate(`diagnostic.${diagnostic.code}`, { line: diagnostic.sourceLine || '' })
 }
 
 async function writeClipboard(prompt: string) {
@@ -132,7 +149,7 @@ function CodexImportModal({
     setParsedFile(null)
     setError('')
     if (!/\.jsonl$/i.test(file.name)) {
-      setError('请选择 Codex 导出的 .jsonl 文件。普通文档仍请使用原有 Import。')
+      setError(t('ui.invalidCodexFile'))
       setIsParsing(false)
       return
     }
@@ -147,20 +164,20 @@ function CodexImportModal({
       })
       if (requestId !== parseRequestRef.current) return
       if (!result.ok) {
-        setError(result.error.message)
+        setError(diagnosticText(result.error, locale, t))
         return
       }
       const markerSuffix = request.marker.replace('CONTEXT_CANVAS_EXPORT_', '').toLowerCase()
       const isCurrentPrefixExport = file.name.toLowerCase().includes(markerSuffix)
       if (result.data.boundary.kind === 'eof' && !isCurrentPrefixExport) {
-        setError('此文件既不包含本次唯一标记，文件名也不属于本次导出。请重新复制指令，并拖入这次生成的文件。')
+        setError(t('ui.markerMismatch'))
         return
       }
       setParsedFile({ file, session: result.data })
     } catch (parseError) {
       if (requestId !== parseRequestRef.current) return
       const detail = parseError instanceof Error ? parseError.message : ''
-      setError(detail ? `浏览器无法读取这个文件：${detail}` : '浏览器无法读取这个文件，请重新选择。')
+      setError(detail ? t('ui.fileReadErrorDetail', { detail }) : t('ui.fileReadError'))
     } finally {
       if (requestId === parseRequestRef.current) setIsParsing(false)
     }
@@ -340,7 +357,7 @@ function CodexImportModal({
 
             {parsedFile.session.diagnostics.length > 0 && (
               <div className="codex-import-diagnostics">
-                {parsedFile.session.diagnostics.map((diagnostic, index) => <span key={`${diagnostic.code}-${index}`}>{diagnostic.message}</span>)}
+                {parsedFile.session.diagnostics.map((diagnostic, index) => <span key={`${diagnostic.code}-${index}`}>{diagnosticText(diagnostic, locale, t)}</span>)}
               </div>
             )}
           </section>
@@ -356,7 +373,7 @@ function CodexImportModal({
           <button className="secondary-button" onClick={onClose}>{t('codex.cancel')}</button>
           <button className="primary-button" disabled={!parsedFile || isParsing} onClick={confirmImport}>
             <Bot size={16} />
-            {parsedFile ? '导入为 Complex Chat' : '等待会话文件'}
+            {parsedFile ? t('codex.importComplex') : t('codex.waitingForFile')}
           </button>
         </div>
       </div>
@@ -365,7 +382,7 @@ function CodexImportModal({
 }
 
 export function CodexImportLauncher({ startNodeId, endNodeId, createId, onImport }: CodexImportLauncherProps) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const [request, setRequest] = useState<CodexExportRequest | null>(null)
   const [copyState, setCopyState] = useState<CopyState>('copying')
   const launcherButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -391,7 +408,7 @@ export function CodexImportLauncher({ startNodeId, endNodeId, createId, onImport
     <>
       <button ref={launcherButtonRef} className="secondary-button wide codex-import-launcher" onClick={openImport}>
         <Bot size={16} />
-        导入 Codex 会话
+        {t('ui.codexLauncher')}
       </button>
       {request && (
         <CodexImportModal
