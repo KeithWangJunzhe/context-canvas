@@ -61,6 +61,7 @@
   "complex.status.aborted": "已中止",
   "complex.status.in_progress": "进行中",
   "complex.openTurns": "打开 Turns",
+  "complex.readContext": "读取 Context",
   "notice.imported": "已导入 {{count}} 个 Codex Turn",
   "notice.importedOne": "已导入 1 个 Codex Turn",
   "notice.importSummary": "{{file}} 已作为包含 {{count}} 个 Turn 的 Complex Chat 导入。",
@@ -183,6 +184,8 @@
   ,"ui.fileReadError": "浏览器无法读取这个文件，请重新选择。"
   ,"ui.fileReadErrorDetail": "浏览器无法读取这个文件：{{detail}}"
   ,"ui.codexLauncher": "导入 Codex 会话"
+  ,"ui.noUsedContext": "没有保存的 context 候选"
+  ,"ui.usedContextRead": "已添加 {{count}} 个使用过的 context 节点"
   ,"ui.codexImportedWithContext": "已导入 Complex Chat 和 {{count}} 个可读取的 context 节点"
   ,"ui.mammothNote": " Mammoth 提示：{{message}}"
   ,"ui.imageReadError": "{{file}} 无法作为图片读取：{{detail}} 原始文件未被修改。"

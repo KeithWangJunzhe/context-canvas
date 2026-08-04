@@ -61,6 +61,7 @@
   "complex.status.aborted": "aborted",
   "complex.status.in_progress": "in progress",
   "complex.openTurns": "Open turns",
+  "complex.readContext": "Read context",
   "notice.imported": "Imported {{count}} Codex turns",
   "notice.importedOne": "Imported 1 Codex turn",
   "notice.importSummary": "{{file}} imported as one Complex Chat with {{count}} turns.",
@@ -183,6 +184,8 @@
   ,"ui.fileReadError": "The browser could not read this file. Please choose it again."
   ,"ui.fileReadErrorDetail": "The browser could not read this file: {{detail}}"
   ,"ui.codexLauncher": "Import Codex session"
+  ,"ui.noUsedContext": "No stored context candidates"
+  ,"ui.usedContextRead": "Added {{count}} used context nodes"
   ,"ui.codexImportedWithContext": "Imported Complex Chat and {{count}} readable context nodes"
   ,"ui.mammothNote": " Mammoth reported: {{message}}"
   ,"ui.imageReadError": "{{file}} could not be read as an image: {{detail}} The original file was not changed."

@@ -92,6 +92,7 @@ type ContextFlowData = ContextNode & {
   onResliceNode?: (nodeId: string) => void
   onResizeTextBox?: (nodeId: string, width: number, height: number) => void
   onOpenComplexChat?: (nodeId: string) => void
+  onReadUsedContext?: (nodeId: string) => void
 }
 type ContextFlowNode = Node<ContextFlowData>
 
@@ -325,6 +326,12 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           <MessageSquareText size={13} />
           {t('complex.openTurns')}
         </button>
+        {Array.isArray(contextNode.usedContextCandidates) && contextNode.usedContextCandidates.length > 0 && (
+          <button className="node-mini-action nodrag nopan" onClick={() => contextNode.onReadUsedContext?.(contextNode.id)}>
+            <FileText size={13} />
+            {t('complex.readContext')}
+          </button>
+        )}
         <Handle type="source" position={Position.Right} />
       </div>
     )
@@ -1689,6 +1696,7 @@ export function App() {
                   setActiveTextNodeId(null)
                   setActiveImageId(null)
                 },
+                onReadUsedContext,
                 outputFormat,
                 onOutputFormatChange: changeOutputFormat,
                 onDownloadBundle: downloadBundle,
@@ -1703,6 +1711,7 @@ export function App() {
                   setActiveTextNodeId(null)
                   setActiveImageId(null)
                 },
+                onReadUsedContext,
                 onResizeTextBox,
               }
         if (existing)
@@ -1780,6 +1789,7 @@ export function App() {
         threadId: session.session.codexThreadId,
         sourceFormat: session.sourceFormat,
       },
+      usedContextCandidates,
     }
     const newEdges = connectStartAndEnd
       ? [
@@ -1817,6 +1827,43 @@ export function App() {
     setActiveImageId(null)
     setImportNotice(t('notice.importSummary', { file: sourceFileName, count: importedTurns.length }))
     setSaveToast(t('ui.codexImportedWithContext', { count: usedContextNodes.length }))
+  }
+
+  const onReadUsedContext = (nodeId: string) => {
+    const sourceNode = workspace.nodes.find((node) => node.id === nodeId && node.type === 'complex_chat')
+    const candidates = (sourceNode?.usedContextCandidates || []) as CodexUsedContextCandidate[]
+    if (candidates.length === 0) {
+      setSaveToast(t('ui.noUsedContext'))
+      return
+    }
+
+    let addedCount = 0
+    updateWorkspace((current) => {
+      const existingPaths = new Set(current.nodes.map((node) => node.sourcePath).filter(Boolean))
+      const nodes = candidates.flatMap((candidate) => {
+        if (existingPaths.has(candidate.path)) return []
+        if (candidate.kind === 'document' && candidate.content) {
+          const fileName = candidate.path.split(/[\\/]/).pop() || candidate.path
+          addedCount += 1
+          return [createTextNode('document', sourceTitle(fileName), candidate.content, fileName, candidate.path)]
+        }
+        if (candidate.kind === 'image' && candidate.content?.startsWith('data:image/')) {
+          const fileName = candidate.path.split(/[\\/]/).pop() || candidate.path
+          addedCount += 1
+          return [createImageNode(sourceTitle(fileName), candidate.content, fileName, undefined, undefined, candidate.path)]
+        }
+        return []
+      })
+      return {
+        ...current,
+        nodes: [...current.nodes, ...nodes],
+        edges: [
+          ...current.edges,
+          ...nodes.map((node) => ({ id: createId('edge_used_context'), from: nodeId, to: node.id, label: 'used context' })),
+        ],
+      }
+    })
+    setSaveToast(t('ui.usedContextRead', { count: addedCount }))
   }
 
   const undoWorkspace = () => {
