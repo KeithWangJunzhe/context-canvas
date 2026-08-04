@@ -62,6 +62,8 @@
   "complex.status.in_progress": "进行中",
   "complex.openTurns": "打开 Turns",
   "complex.readContext": "读取 Context",
+  "complex.readContextHint": "从这个会话中选择要补充到 Canvas 的 context。",
+  "complex.addSelectedContext": "添加选中的 Context",
   "notice.imported": "已导入 {{count}} 个 Codex Turn",
   "notice.importedOne": "已导入 1 个 Codex Turn",
   "notice.importSummary": "{{file}} 已作为包含 {{count}} 个 Turn 的 Complex Chat 导入。",

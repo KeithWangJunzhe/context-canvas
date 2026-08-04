@@ -223,7 +223,8 @@ function CodexImportModal({
       sourceFileName: parsedFile.file.name,
       splitTurns: choices.splitTurns,
       connectStartAndEnd: choices.connectStartAndEnd,
-      usedContextCandidates: parsedFile.candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id)),
+      usedContextCandidates: parsedFile.candidates,
+      selectedUsedContextIds: selectedCandidateIds,
     })
   }
 

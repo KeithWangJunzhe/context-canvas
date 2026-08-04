@@ -166,6 +166,7 @@ export type CodexImportPayload = {
   splitTurns: boolean
   connectStartAndEnd: boolean
   usedContextCandidates: CodexUsedContextCandidate[]
+  selectedUsedContextIds: string[]
 }
 
 export type CodexExportRequest = {

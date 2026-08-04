@@ -1626,6 +1626,7 @@ export function App() {
   const [saveToast, setSaveToast] = useState('')
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
+  const [usedContextReview, setUsedContextReview] = useState<{ nodeId: string; candidateIds: string[] } | null>(null)
   const historyPastRef = useRef<Workspace[]>([])
   const historyFutureRef = useRef<Workspace[]>([])
   const resliceNodeRef = useRef<(nodeId: string) => void>(() => {})
@@ -1750,7 +1751,7 @@ export function App() {
     })
   }
 
-  const importCodexSession = ({ patch, session, sourceFileName, splitTurns, connectStartAndEnd, usedContextCandidates }: CodexImportPayload) => {
+  const importCodexSession = ({ patch, session, sourceFileName, splitTurns, connectStartAndEnd, usedContextCandidates, selectedUsedContextIds }: CodexImportPayload) => {
     if (patch.nodes.length === 0) return
     const sessionNodeId = createId('node_codex_session')
     const importedTurns: ContextTurn[] = splitTurns
@@ -1797,7 +1798,7 @@ export function App() {
           { id: createId('edge_codex_session'), from: sessionNodeId, to: endNodeId, label: 'imported session' },
         ]
       : []
-    const usedContextNodes = usedContextCandidates.flatMap((candidate: CodexUsedContextCandidate) => {
+    const usedContextNodes = usedContextCandidates.filter((candidate) => selectedUsedContextIds.includes(candidate.id)).flatMap((candidate: CodexUsedContextCandidate) => {
       if (candidate.kind === 'document' && candidate.content) {
         const fileName = candidate.path.split(/[\\/]/).pop() || candidate.path
         return [createTextNode('document', sourceTitle(fileName), candidate.content, fileName, candidate.path)]
@@ -1836,7 +1837,17 @@ export function App() {
       setSaveToast(t('ui.noUsedContext'))
       return
     }
+    const existingPaths = new Set(workspace.nodes.map((node) => node.sourcePath).filter(Boolean))
+    setUsedContextReview({
+      nodeId,
+      candidateIds: candidates.filter((candidate) => !existingPaths.has(candidate.path)).map((candidate) => candidate.id),
+    })
+  }
 
+  const confirmUsedContextReview = () => {
+    if (!usedContextReview) return
+    const sourceNode = workspace.nodes.find((node) => node.id === usedContextReview.nodeId && node.type === 'complex_chat')
+    const candidates = ((sourceNode?.usedContextCandidates || []) as CodexUsedContextCandidate[]).filter((candidate) => usedContextReview.candidateIds.includes(candidate.id))
     let addedCount = 0
     updateWorkspace((current) => {
       const existingPaths = new Set(current.nodes.map((node) => node.sourcePath).filter(Boolean))
@@ -1859,10 +1870,11 @@ export function App() {
         nodes: [...current.nodes, ...nodes],
         edges: [
           ...current.edges,
-          ...nodes.map((node) => ({ id: createId('edge_used_context'), from: nodeId, to: node.id, label: 'used context' })),
+          ...nodes.map((node) => ({ id: createId('edge_used_context'), from: usedContextReview.nodeId, to: node.id, label: 'used context' })),
         ],
       }
     })
+    setUsedContextReview(null)
     setSaveToast(t('ui.usedContextRead', { count: addedCount }))
   }
 
@@ -2250,6 +2262,11 @@ export function App() {
 
   resliceNodeRef.current = resliceNode
 
+  const usedContextReviewNode = usedContextReview
+    ? workspace.nodes.find((node) => node.id === usedContextReview.nodeId && node.type === 'complex_chat')
+    : undefined
+  const usedContextReviewCandidates = (usedContextReviewNode?.usedContextCandidates || []) as CodexUsedContextCandidate[]
+
   return (
     <ReactFlowProvider>
       <div
@@ -2469,6 +2486,41 @@ export function App() {
             onAddText={(type, title, body) => addNode(createTextNode(type, title, body))}
             onImportFile={importFile}
           />
+        )}
+        {usedContextReview && usedContextReviewNode && (
+          <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setUsedContextReview(null)}>
+            <div className="modal context-review-modal" role="dialog" aria-modal="true" aria-labelledby="context-review-title">
+              <div className="modal-header">
+                <div>
+                  <h2 id="context-review-title">{t('complex.readContext')}</h2>
+                  <p>{t('complex.readContextHint')}</p>
+                </div>
+                <button className="icon-button" onClick={() => setUsedContextReview(null)} aria-label={t('ui.closeDialog')}>x</button>
+              </div>
+              <div className="context-review-list">
+                {usedContextReviewCandidates.map((candidate) => (
+                  <label key={candidate.id} className="context-review-item">
+                    <input
+                      type="checkbox"
+                      checked={usedContextReview.candidateIds.includes(candidate.id)}
+                      disabled={!candidate.content}
+                      onChange={(event) => setUsedContextReview((current) => current
+                        ? { ...current, candidateIds: event.target.checked ? [...current.candidateIds, candidate.id] : current.candidateIds.filter((id) => id !== candidate.id) }
+                        : current)}
+                    />
+                    <span>
+                      <strong>{candidate.path}</strong>
+                      <small>{candidate.content ? t('codex.contextReadFromRollout') : t('codex.contextPathOnly')}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button className="secondary-button" onClick={() => setUsedContextReview(null)}>{t('ui.cancel')}</button>
+                <button className="primary-button" onClick={confirmUsedContextReview}>{t('complex.addSelectedContext')}</button>
+              </div>
+            </div>
+          </div>
         )}
         {showSettings && <SettingsModal locale={locale} onLocaleChange={setLocale} onClose={() => setShowSettings(false)} />}
         {showNewCanvas && <NewCanvasModal onClose={() => setShowNewCanvas(false)} onCreate={startNewCanvas} onDownloadAndCreate={downloadCurrentBundleAndStartNew} />}

@@ -1216,6 +1216,59 @@ button:disabled {
   justify-content: space-between;
 }
 
+.context-review-modal {
+  width: min(560px, calc(100vw - 40px));
+}
+
+.context-review-list {
+  display: grid;
+  gap: 6px;
+  max-height: 360px;
+  overflow: auto;
+  margin: 0 -4px;
+  padding: 4px;
+}
+
+.context-review-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid #d8dde3;
+  border-radius: 7px;
+  background: #fbfbfc;
+  cursor: pointer;
+}
+
+.context-review-item:has(input:disabled) {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.context-review-item span {
+  min-width: 0;
+}
+
+.context-review-item strong,
+.context-review-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-review-item strong {
+  color: #35404a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.context-review-item small {
+  margin-top: 3px;
+  color: #78838e;
+  font-size: 11px;
+}
+
 .confirm-copy {
   border: 1px solid #d8dde3;
   border-radius: 8px;
