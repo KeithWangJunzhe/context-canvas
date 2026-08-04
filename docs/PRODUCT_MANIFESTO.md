@@ -98,7 +98,7 @@ It should include both utility and interaction quality:
 - pin/include/ignore/needs_review states
 - reason fields and tags
 - editable output preview
-- markdown, txt, and agent-readable JSON export
+- markdown and agent-readable JSON export
 - localStorage and workspace export/import
 - comfortable deletion, selection, shortcut, and save feedback behavior
 

@@ -1,8 +1,16 @@
 # Context Canvas Roadmap
 
-Last updated: 2026-08-01
+Last updated: 2026-08-04
 
 This roadmap captures the current product phasing. It is intentionally practical: prove the workflow with the user's own work first, make the interaction strong enough for repeated use, then explore larger agent integrations and assisted intent operations.
+
+## Release Mapping
+
+- `1.0.0 Personal Use`: the local-first canvas, annotation workflow, bundle export, and Codex / Complex Chat context import are usable end to end.
+- `2.0.0 Interaction Stability`: UI cleanup, keyboard shortcuts, denser block review, and repeated-use ergonomics.
+- `3.0.0 Agent Integration`: hooks, direct context exchange, and the human-in-the-loop feedback loop.
+
+These are product milestones. Bug fixes and small additive changes can use patch or minor releases within a milestone.
 
 ## Product Thesis
 
@@ -23,7 +31,7 @@ The product should help users separate and assemble:
 
 In short: agents are getting better at executing; humans still need a better way to express what they want executed.
 
-## Phase 1: Personal Usable And Interaction-Ready Context Canvas
+## Phase 1 / `1.0.0`: Personal Usable And Interaction-Ready Context Canvas
 
 Goal: the user can use the tool for real Codex work, and the interaction is calm enough for continuous context editing.
 
@@ -47,10 +55,12 @@ Current capabilities:
 - image bbox/text annotations
 - canvas nodes and editable connections
 - editable bundle output
-- md/txt/json bundle export
+- Markdown/JSON bundle export
 - localStorage persistence
 - Data URL image persistence for refresh/restart and workspace JSON export/import
 - bidirectional reader/block review for text nodes
+- Codex session import as Complex Chat
+- used-context candidate review, `Read context`, and legacy JSONL import
 
 Phase 1 validation:
 
@@ -96,7 +106,7 @@ Recommended path:
 3. Keep blocks editable so the parser can be imperfect.
 4. Later explore LLM-assisted structure-only cleanup.
 
-## Phase 2: Productization Polish
+## Phase 2 / `2.0.0`: Productization And Interaction Stability
 
 Goal: make the tool easier for other people to adopt, test, and contribute to after the creator's personal workflow is proven.
 
@@ -113,7 +123,7 @@ Focus areas:
 
 Principle: Phase 2 should make the project easier to understand from the outside without overfitting the tool to a generic audience too early.
 
-## Phase 3: Agent Integration And Assisted Intent Ops
+## Phase 3 / `3.0.0`: Agent Integration And Assisted Intent Ops
 
 Goal: explore where lightweight agent help and external tool hooks genuinely reduce briefing effort.
 

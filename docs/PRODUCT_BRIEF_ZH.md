@@ -62,7 +62,7 @@ PoC 不需要先做成完整平台。
 - 画布节点、连线、备注
 - 基础画布形状：矩形、text box、简单流程箭头
 - 输出 preview 可编辑
-- 导出 md/txt/json bundle
+- 导出 md/json bundle
 - 本地保存和 workspace 导入导出
 - 删除、选中、快捷键、toast 等基础交互优化
 

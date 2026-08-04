@@ -1,6 +1,6 @@
 # Context Canvas PoC Dev Log
 
-Last updated: 2026-08-02
+Last updated: 2026-08-04
 
 This file is a lightweight handoff note for future Codex work on the local PoC.
 
@@ -8,9 +8,7 @@ This file is a lightweight handoff note for future Codex work on the local PoC.
 
 Context Canvas is currently a frontend-heavy local Vite/React/TypeScript app.
 
-The app lives in:
-
-- `/Users/keith/Desktop/AI/context-forge`
+The app lives in the local repository checkout.
 
 Core files:
 
@@ -26,8 +24,8 @@ Core files:
 Use bundled Codex Node runtime:
 
 ```bash
-cd /Users/keith/Desktop/AI/context-forge
-PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/vite --host 127.0.0.1
+cd <repository-root>
+PATH=/path/to/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/vite --host 127.0.0.1
 ```
 
 Then open:
@@ -39,14 +37,14 @@ http://127.0.0.1:5173/
 Validation:
 
 ```bash
-cd /Users/keith/Desktop/AI/context-forge
-PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/tsc -b
-PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/vite build
+cd <repository-root>
+PATH=/path/to/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/tsc -b
+PATH=/path/to/node/bin:$PWD/node_modules/.bin:$PATH ./node_modules/.bin/vite build
 ```
 
 Latest validation:
 
-- 2026-07-28: `PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH pnpm run build` passed. Vite emitted the expected large-chunk warning after adding Mammoth.
+- 2026-07-28: the bundled Node runtime build passed. Vite emitted the expected large-chunk warning after adding Mammoth.
 
 Do not auto-start the dev server unless the user asks. The user wants to trigger testing.
 
@@ -190,8 +188,8 @@ Current implementation:
 - New imports stay unconnected by default. The user decides which sources connect on the canvas.
 - If there are no user-authored source connections, bundle generation still follows workspace/import order, with pinned context emitted first.
 - Connections can be selected on the canvas, renamed in the inspector, and deleted from the inspector or React Flow edge deletion.
-- `End` has export controls for `md`, `txt`, and `json`. The top toolbar Bundle button shares the same selected output format.
-- `md` and `txt` export the current bundle draft/generated text. `json` exports a structured object containing metadata, the current markdown bundle text, and the workspace snapshot.
+- `End` has export controls for `md` and `json`. The top toolbar Bundle button shares the same selected output format.
+- `md` exports the current bundle draft/generated text. `json` exports an agent-readable structured object; local persistence and `Export workspace` remain separate full-workspace state.
 - 2026-07-29 update: bundle markdown is grouped by source component. Each source section includes type, file name, source path/import path, connection labels, included evidence, image annotations, excluded context, and open questions.
 - Browser imports cannot expose the user's full local filesystem path for privacy reasons. `sourcePath` currently stores the browser-provided relative path when available, otherwise the file name. A desktop/plugin version can replace this with a real local path later.
 - The top toolbar has `New canvas`. It opens a confirmation dialog that lets the user download the current bundle before clearing the workspace into a fresh Start/End canvas.
@@ -221,7 +219,7 @@ Current implementation:
 
 ## Key Product Decisions
 
-1. Start local-only. No plugin packaging yet.
+1. Start local-only. The npm CLI is a distribution wrapper for the local web app; native plugin packaging remains future work.
 2. Frontend-heavy PoC. No traditional backend in the first phase.
 3. Local file import is read-only. Original files must not be mutated.
 4. Document import defaults to full include.
@@ -240,7 +238,7 @@ Created on 2026-07-28:
 
 - GitHub repository: https://github.com/KeithWangJunzhe/context-canvas
 - Figma design file: https://www.figma.com/design/niYXxdhD4xwKbTi6YRlwc8
-- Repository visibility: private initial repo, suitable for later public showcase.
+- Repository visibility: prepared for public showcase after the `1.0.0` documentation and privacy checklist are reviewed.
 - Initial local commit: `Initial Context Canvas PoC`.
 
 Figma setup:
@@ -256,7 +254,7 @@ Figma setup:
 - In-text annotations use simple string matching, not durable offsets or AST positions.
 - Repeated identical text may highlight more than intended.
 - No reason input in the floating menu yet; reason must be edited in the right inspector.
-- Image upload uses object URLs; exported workspaces do not preserve image file bytes.
+- Imported image bytes are stored as Data URLs in workspace state so refresh and workspace export/import preserve previews. Large image collections may still exceed localStorage limits.
 - Block inspector gets visually noisy with many generated annotations.
 
 ## Next Good Tasks
@@ -286,4 +284,25 @@ Medium-term:
 Later:
 
 - MCP tools for `list_blocks`, `get_active_context`, `set_block_status`, `export_bundle`.
-- Plugin packaging after the local PoC proves useful.
+- Deeper plugin packaging and direct agent integration after the local `1.0.0` workflow proves useful.
+## 2026-08-04: 1.0.0 Packaging And Public-Repository Preparation
+
+Current release decision:
+
+- `1.0.0` represents the personal-use milestone: the local canvas, annotation workflow, bundle output, and Codex / Complex Chat context import are usable end to end.
+- `2.0.0` is reserved for interaction stability and UI refinement.
+- `3.0.0` is reserved for deeper agent integration and the human-in-the-loop feedback loop.
+
+Current implementation:
+
+- The package is named `context-canvas` and exposes `npx context-canvas` through a small Node static server.
+- The package contains the built `dist`, CLI entrypoint, README, and package metadata; React and Vite remain build-time dependencies.
+- The CLI binds to `127.0.0.1` by default, supports `--port` and `--host`, and does not read or upload workspace data itself.
+- `experiment/codex-complex-chat` has been consolidated into `main` after manual testing of multi-turn import, used-context candidate review, `Read context`, deduplication, legacy JSONL import, localization, persistence, and bundle output.
+
+Release validation:
+
+- `tsc -b` and `vite build`
+- `node scripts/verify-codex-import.mjs`
+- `pnpm pack` contents check
+- CLI `--help` and local server smoke test

@@ -14,7 +14,7 @@ Available bundled runtime in this Codex desktop thread:
 
 - Node.js: `v24.14.0`
 - pnpm: `11.9.0`
-- Writable workspace: `/Users/keith/Desktop/AI/context-forge`
+- Writable workspace: the local repository checkout
 
 Dependency installation will require network access when we actually scaffold the app.
 
@@ -177,7 +177,7 @@ Recommended PoC:
 
 - App state in browser memory.
 - Save/load workspace as JSON file.
-- Store images as object URLs during session, export copied images into an `assets/` folder later.
+- The current PoC stores imported image bytes as Data URLs so previews survive refresh and workspace export. A future desktop/app version can move them to IndexedDB or an asset folder.
 
 ## Open-source Components Considered
 

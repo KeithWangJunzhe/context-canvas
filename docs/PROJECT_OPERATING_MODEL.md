@@ -61,7 +61,7 @@ Why GitHub helps:
 
 Recommended initial repo state:
 
-- Keep it private at first.
+- It is now prepared for a public showcase after the release checklist is reviewed.
 - Add a clear README describing the concept and local PoC.
 - Add screenshots or a short demo GIF once the UI is more coherent.
 - Keep docs in `docs/`.
@@ -69,7 +69,7 @@ Recommended initial repo state:
 
 Suggested first GitHub checklist:
 
-- initialize git inside `/Users/keith/Desktop/AI/context-forge` if not already initialized
+- initialize git inside the local repository checkout if not already initialized
 - add `.gitignore` for `node_modules`, `dist`, local build/cache files
 - commit current PoC and docs
 - create GitHub repo

@@ -12,6 +12,8 @@ Context Canvas is a frontend-heavy local PoC for interactive context engineering
 
 Current release: **1.0.0 Personal Use**. This milestone means the local-first workflow is usable end to end; it does not imply that the future agent integration surface is stable.
 
+Current release: **1.0.0 Personal Use**. This milestone means the local-first workflow is usable end to end; it does not imply that the future agent integration surface is stable.
+
 The central idea is simple: agents are getting better at execution, while people still need a better interface for expressing intent. Instead of pasting one long, messy prompt, users can bring documents, chat transcripts, screenshots, and notes into a canvas; review them at block or in-text level; connect related sources; and export a compact context bundle.
 
 This is not a finished plugin, memory system, or RAG product. It is a practical experiment in intent management.
@@ -24,7 +26,7 @@ This is not a finished plugin, memory system, or RAG product. It is a practical 
 - Pin, include, ignore, needs-review, tags, and annotation reasons.
 - Image bounding boxes and text boxes with preset colors and fonts.
 - Canvas nodes, editable connections, source deletion, Start/End system nodes, and New canvas flow.
-- Editable bundle preview with Markdown, text, and agent-readable JSON export.
+- Editable bundle preview with Markdown and agent-readable JSON export.
 - Local-first persistence through `localStorage`; imported source files are read-only.
 - Imported image data is embedded as Data URLs so local previews survive refresh and workspace export/import.
 
@@ -72,7 +74,7 @@ These are product milestones, not a promise that every minor change between mile
 When using Codex Desktop without a system Node installation:
 
 ```bash
-PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH pnpm run build
+PATH=/path/to/node/bin:$PWD/node_modules/.bin:$PATH pnpm run build
 ```
 
 ### Repository map
@@ -89,15 +91,16 @@ Start with [`docs/README.md`](docs/README.md) for the document map. The most use
 
 ### Branches and collaboration
 
-- `main`: stable local PoC for manual testing.
-- `integration/import-agent-chats`: contributor integration branch for the current agent-chat import experiment.
-- `codex/codex-import-support`: contributor feature branch for Codex session import exploration.
+- `main`: current `1.0.0` personal-use release baseline.
+- `experiment/codex-complex-chat`: completed Codex / Complex Chat integration branch, now consolidated into `main`.
+- `codex/codex-import-support`: original contributor branch retained as the history of PR #1.
+- New work: use a focused feature branch and open a PR.
 
 For new work, create a focused feature branch and open a PR. Experimental integrations should be reviewable in their own branch before they are considered for `main`. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### Scope and status
 
-This repository is intentionally local-first and PoC-stage. There is no hosted deployment, account system, cloud sync, native plugin package, or guarantee that an already-running agent conversation will change when a source is ignored. The exported bundle is the explicit source of truth for a future agent run.
+This repository is intentionally local-first and personal-use stage. There is no hosted deployment, account system, cloud sync, or native plugin package. An npm CLI now distributes the local web app, but there is no guarantee that an already-running agent conversation will change when a source is ignored. The exported bundle is the explicit source of truth for a future agent run.
 
 The roadmap is organized around three layers:
 
@@ -129,7 +132,7 @@ Context Canvas 是一个 frontend-heavy 的本地 PoC，用来在把材料交给
 - Pin、Include、Ignore、Needs review、标签和标注原因。
 - 图片 bounding box 和 text box，支持预设颜色与字体。
 - 画布节点、可编辑连线、素材删除、Start/End 节点和 New canvas 流程。
-- 可编辑的 bundle preview，以及 Markdown、txt、agent-readable JSON 导出。
+- 可编辑的 bundle preview，以及 Markdown、agent-readable JSON 导出。
 - 通过 `localStorage` 做 local-first 保存；导入的原始文件只读，不会被修改。
 - 图片以 Data URL 保存，因此刷新和 workspace 导入导出后仍能在本地预览。
 
@@ -177,7 +180,7 @@ pnpm run build
 如果在 Codex Desktop 中没有系统 Node，可以使用：
 
 ```bash
-PATH=/Users/keith/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH pnpm run build
+PATH=/path/to/node/bin:$PWD/node_modules/.bin:$PATH pnpm run build
 ```
 
 ### 仓库结构
@@ -194,15 +197,16 @@ package.json         脚本和运行时依赖
 
 ### 分支和协作
 
-- `main`：用于手动测试的稳定本地 PoC。
-- `integration/import-agent-chats`：当前 agent 聊天导入实验的贡献者集成分支。
-- `codex/codex-import-support`：Codex session 导入探索的贡献者功能分支。
+- `main`：当前 `1.0.0` 个人可用版本基线。
+- `experiment/codex-complex-chat`：已完成的 Codex / Complex Chat 集成实验分支，成果已收束回 `main`。
+- `codex/codex-import-support`：保留为 PR #1 初始贡献记录的原始分支。
+- 新功能：使用独立 feature branch 并提交 PR。
 
 新的工作建议使用独立 feature branch 并提交 PR。实验性 integration 应先在独立分支中验证，再考虑进入 `main`。详见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 
 ### 范围和状态
 
-这个仓库目前刻意保持 local-first 和 PoC 阶段：没有 hosted deployment、账户系统、云同步、原生插件包，也不保证已经运行中的 agent 对话会因为标记 Ignore 而改变。下一次 agent 运行应把导出的 bundle 作为明确的 source of truth。
+这个仓库目前刻意保持 local-first 和个人可用阶段：没有 hosted deployment、账户系统、云同步或原生插件包。当前提供 npm CLI 作为本地 web app 的分发方式，但不保证已经运行中的 agent 对话会因为标记 Ignore 而改变。下一次 agent 运行应把导出的 bundle 作为明确的 source of truth。
 
 路线图分成三层：
 
