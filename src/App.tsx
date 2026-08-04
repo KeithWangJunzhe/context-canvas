@@ -1837,10 +1837,9 @@ export function App() {
       setSaveToast(t('ui.noUsedContext'))
       return
     }
-    const existingPaths = new Set(workspace.nodes.map((node) => node.sourcePath).filter(Boolean))
     setUsedContextReview({
       nodeId,
-      candidateIds: candidates.filter((candidate) => !existingPaths.has(candidate.path)).map((candidate) => candidate.id),
+      candidateIds: candidates.filter((candidate) => Boolean(candidate.content)).map((candidate) => candidate.id),
     })
   }
 
