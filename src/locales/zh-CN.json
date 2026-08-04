@@ -1,0 +1,213 @@
+{
+  "settings.title": "设置",
+  "settings.language": "语言",
+  "settings.languageHint": "选择 Context Canvas 界面使用的语言。",
+  "settings.english": "English",
+  "settings.chinese": "中文",
+  "settings.close": "完成",
+  "codex.eyebrow": "本地 Codex rollout",
+  "codex.title": "导入 Codex 会话",
+  "codex.description": "无需 Hook 或后台服务。Codex 导出本地文件后，由浏览器在本机解析。",
+  "codex.close": "关闭 Codex 导入",
+  "codex.copyCopied": "导出指令已复制。现在切换到目标 Codex 任务，粘贴并发送。",
+  "codex.copyCopying": "正在复制导出指令…",
+  "codex.copyFailed": "浏览器没有自动复制，请点击按钮复制。",
+  "codex.copyAgain": "重新复制",
+  "codex.copyInstruction": "复制指令",
+  "codex.stepOneTitle": "在目标 Codex 任务中发送指令",
+  "codex.stepOneBody": "Codex 会根据唯一标记定位当前 rollout，并导出指令之前的记录。",
+  "codex.stepTwoTitle": "允许必要的本地文件权限",
+  "codex.stepTwoBody": "如出现提示，请允许读取 Codex 会话目录和写入 Context Canvas Imports 文件夹。",
+  "codex.stepThreeTitle": "把生成的 .jsonl 文件拖到下方",
+  "codex.stepThreeBody": "原会话文件不会被修改，内容不会上传。",
+  "codex.promptDetails": "查看导出指令与唯一标记",
+  "codex.dropParsing": "正在解析会话…",
+  "codex.dropIdle": "拖入 Codex 会话文件",
+  "codex.dropHint": "或点击选择 .jsonl 文件",
+  "codex.previewLabel": "Codex 导入预览",
+  "codex.workingDirectory": "工作目录",
+  "codex.timeRange": "时间范围",
+  "codex.userTurns": "用户 Turn",
+  "codex.assistantMessages": "Assistant 消息",
+  "codex.agentMessages": "子 Agent 消息",
+  "codex.toolCalls": "工具调用",
+  "codex.willCreate": "将创建",
+  "codex.importBoundary": "导入边界",
+  "codex.markerBoundary": "已按本次 marker 截断",
+  "codex.prefixBoundary": "已验证本次导出文件前缀",
+  "codex.legacyBoundary": "旧版/完整会话；没有本次导出 marker",
+  "codex.legacyBoundaryNote": "这是一个没有当前 marker 的旧版或完整会话。请先检查候选 context，再确认导入。",
+  "codex.legacySessionWarning": "没有找到本次导出 marker。这个有效 JSONL 会作为完整旧会话导入。",
+  "codex.splitTurns": "按 Turn 切分（展开后显示）",
+  "codex.includeCommentary": "Assistant commentary",
+  "codex.includeAgentMessages": "子 Agent 消息",
+  "codex.includeToolCalls": "工具调用",
+  "codex.includeToolOutputs": "工具输出",
+  "codex.connectStartEnd": "自动连接 Start / End",
+  "codex.boundaryVerified": "已验证导入边界：导出指令和 Codex 的导出回复不会进入 Canvas。工具及子 Agent 记录会标记为 needs review，默认不会进入 Bundle。",
+  "codex.boundaryWaiting": "选择文件后会核对本次唯一标记或导出文件名，再确认导入范围。",
+  "codex.cancel": "取消",
+  "codex.importComplex": "导入为 Complex Chat",
+  "codex.importLegacy": "导入旧版会话",
+  "codex.waitingForFile": "等待会话文件",
+  "codex.usedContextTitle": "Agent 使用过的 Context",
+  "codex.usedContextDescription": "勾选 agent 读取或提到的 context。能从 rollout 读到正文的文件会生成并连接到 Complex Chat 节点。",
+  "codex.contextReadFromRollout": "rollout 中包含读取到的正文",
+  "codex.contextPathOnly": "只找到路径，rollout 未包含正文",
+  "codex.selectAllUsedContext": "全选",
+  "codex.clearUsedContext": "清空选择",
+  "complex.eyebrow": "Complex Chat",
+  "complex.saveExit": "保存并退出",
+  "complex.sourceReadOnly": "导入的原始来源保持只读",
+  "complex.noBlocks": "这一 Turn 没有可读取的 block。",
+  "complex.noTurns": "没有导入 Turn",
+  "complex.status.completed": "已完成",
+  "complex.status.aborted": "已中止",
+  "complex.status.in_progress": "进行中",
+  "complex.openTurns": "打开 Turns",
+  "complex.readContext": "读取 Context",
+  "complex.readContextHint": "从这个会话中选择要补充到 Canvas 的 context。",
+  "complex.addSelectedContext": "添加选中的 Context",
+  "notice.imported": "已导入 {{count}} 个 Codex Turn",
+  "notice.importedOne": "已导入 1 个 Codex Turn",
+  "notice.importSummary": "{{file}} 已作为包含 {{count}} 个 Turn 的 Complex Chat 导入。",
+  "ui.importContext": "导入上下文",
+  "ui.importDescription": "粘贴文本，选择本地 Markdown、纯文本或 DOCX 文件，也可以添加截图。",
+  "ui.closeImport": "关闭导入面板",
+  "ui.chat": "聊天",
+  "ui.document": "文档",
+  "ui.note": "笔记",
+  "ui.title": "标题",
+  "ui.sourceText": "来源文本",
+  "ui.pastePlaceholder": "粘贴复制的聊天记录或笔记……",
+  "ui.addDocument": "添加文档",
+  "ui.addImage": "添加图片",
+  "ui.sliceIntoBlocks": "切分为 blocks",
+  "ui.markdownPreview": "Markdown 预览",
+  "ui.readerHint": "在预览中选择文本，再标记它是否进入 bundle。导入的原始文件保持只读，不会被修改。",
+  "ui.charsSelected": "个字符已选择",
+  "ui.noTextSelected": "未选择文本",
+  "ui.noReadableText": "没有导入可读取的文本",
+  "ui.noReadableTextBody": "文件节点已经创建，但没有读取到可用的文档文本。请重新导入，或直接粘贴文档内容。",
+  "ui.changesAutosaved": "修改会自动保存到 workspace。",
+  "ui.saveBack": "保存并返回",
+  "ui.deleteBlock": "删除 block",
+  "ui.removeCustomTag": "删除自定义标签",
+  "ui.customTag": "自定义标签",
+  "ui.reasonNote": "原因或备注……",
+  "ui.box": "框选",
+  "ui.text": "文字",
+  "ui.annotationColor": "标注颜色",
+  "ui.useColor": "使用颜色 {{color}}",
+  "ui.region": "区域",
+  "ui.noImage": "没有图片",
+  "ui.zoom": "缩放 {{zoom}}%",
+  "ui.drawBbox": "在图片上拖动画出 bounding box。",
+  "ui.placeTextBox": "点击或拖动图片来放置文字框。",
+  "ui.connection": "连接",
+  "ui.from": "起点",
+  "ui.to": "终点",
+  "ui.label": "标签",
+  "ui.related": "相关",
+  "ui.deleteConnection": "删除连接",
+  "ui.selectNode": "选择一个节点",
+  "ui.selectNodeBody": "使用 Canvas 检查来源、编辑 blocks 并准备 bundle。",
+  "ui.reviewText": "审阅文本",
+  "ui.zoomEdit": "放大编辑",
+  "ui.textBoxNode": "文字框节点",
+  "ui.textBoxPlaceholder": "双击添加文字",
+  "ui.backgroundColor": "背景颜色",
+  "ui.shape": "形状",
+  "ui.shapeMeaning": "形状含义（可选）",
+  "ui.shapeMeaningPlaceholder": "例如：决策、数据库、信息",
+  "ui.shapeHint": "形状是视觉上的简写。可选的含义会作为辅助字段写入结构化输出。",
+  "ui.imageRegions": "图片区域",
+  "ui.deleteAnnotation": "删除图片标注",
+  "ui.regionNote": "区域备注",
+  "ui.startNode": "开始节点",
+  "ui.startNodeBody": "这是来源上下文的默认入口。新导入的内容会保持未连接，直到你决定 Canvas 的流向。",
+  "ui.structuredBlocks": "结构化 Blocks",
+  "ui.blocks": "Blocks",
+  "ui.all": "全部",
+  "ui.readerBlockHint": "预览和选择发生在中间 reader。这个面板编辑会进入 bundle 的结构化 blocks。",
+  "ui.noMatchingBlocks": "没有符合筛选条件的 blocks。",
+  "ui.bundleNode": "Bundle 节点",
+  "ui.bundleNodeBody": "这个节点代表当前的输出包。使用右侧预览查看 Codex 将看到的内容。",
+  "ui.endNode": "结束节点",
+  "ui.endNodeBody": "这是默认输出点。可以使用它的 Canvas 控件或顶部 Bundle 按钮导出当前 bundle。",
+  "ui.bundlePreview": "Bundle 预览",
+  "ui.outputUse": "输出 / 使用",
+  "ui.edit": "编辑",
+  "ui.generated": "生成结果",
+  "ui.reset": "重置",
+  "ui.newCanvas": "开始一个新的 Canvas？",
+  "ui.newCanvasBody": "这会清空当前 workspace 视图，并在本地保存新的空白 Canvas。",
+  "ui.downloadFirst": "如果想保留当前 Canvas 的输出，请先下载当前 bundle。",
+  "ui.closeDialog": "关闭对话框",
+  "ui.cancel": "取消",
+  "ui.newWithoutDownload": "不下载并新建",
+  "ui.downloadBundleNew": "下载 bundle 并新建",
+  "ui.dropFiles": "拖入 Markdown、文本、DOCX、PNG、JPEG 或 JPG 文件",
+  "ui.localFilesImmediate": "本地文件会立即变成 Canvas 节点。",
+  "ui.settings": "设置",
+  "ui.undo": "撤销",
+  "ui.redo": "重做",
+  "ui.bundleFormat": "Bundle 输出格式",
+  "ui.addSource": "添加来源",
+  "ui.deleteSource": "删除 {{title}}",
+  "ui.autoLater": "自动编排以后再做。现在由你决定 context 如何流动。",
+  "ui.savedSuccessfully": "保存成功",
+  "ui.localSaveFailed": "本地保存失败",
+  "ui.newCanvasReady": "新的 Canvas 已准备好",
+  "ui.nothingToSlice": "没有可切分的内容",
+  "ui.resliced": "已重新切分为 {{count}} 个 blocks",
+  "ui.textBoxAdded": "已添加 {{shape}}",
+  "ui.insertCanvasNode": "插入 Canvas 节点",
+  "ui.insert": "插入",
+  "ui.exportsActive": "导出当前 context",
+  "ui.importOrConnect": "从这里导入或连接来源。"
+  ,"ui.savedLocally": "已保存到本地"
+  ,"ui.shape.rectangle": "矩形"
+  ,"ui.shape.rounded_rectangle": "圆角矩形"
+  ,"ui.shape.diamond": "菱形"
+  ,"ui.shape.cylinder": "圆柱体"
+  ,"ui.import": "导入"
+  ,"ui.saveLocal": "保存到本地"
+  ,"ui.newCanvasButton": "新建 Canvas"
+  ,"ui.exportWorkspace": "导出 workspace"
+  ,"ui.bundle": "Bundle"
+  ,"ui.sources": "来源"
+  ,"ui.loadedLocal": "已加载本地 workspace"
+  ,"ui.autosaveReady": "自动保存已就绪"
+  ,"ui.importedSource": "导入的来源"
+  ,"ui.untitledSource": "未命名来源"
+  ,"status.included": "包含"
+  ,"status.excluded": "忽略"
+  ,"status.pinned": "置顶"
+  ,"status.needs_review": "待审核"
+  ,"ui.invalidCodexFile": "请选择 Codex 导出的 .jsonl 文件。普通文档仍请使用原有导入。"
+  ,"ui.markerMismatch": "此文件既不包含本次唯一标记，文件名也不符合本次导出。请重新复制指令并拖入新生成的文件。"
+  ,"ui.fileReadError": "浏览器无法读取这个文件，请重新选择。"
+  ,"ui.fileReadErrorDetail": "浏览器无法读取这个文件：{{detail}}"
+  ,"ui.codexLauncher": "导入 Codex 会话"
+  ,"ui.noUsedContext": "没有保存的 context 候选"
+  ,"ui.usedContextRead": "已添加 {{count}} 个使用过的 context 节点"
+  ,"ui.codexImportedWithContext": "已导入 Complex Chat 和 {{count}} 个可读取的 context 节点"
+  ,"ui.mammothNote": " Mammoth 提示：{{message}}"
+  ,"ui.imageReadError": "{{file}} 无法作为图片读取：{{detail}} 原始文件未被修改。"
+  ,"ui.docxNoText": "{{file}} 已添加，但 DOCX 解析器没有找到可读取的正文。原始文件未被修改。"
+  ,"ui.docxParserNotes": "{{file}} 已导入，但解析器有提示。{{notes}}"
+  ,"ui.docxImportError": "{{file}} 无法作为 DOCX 导入：{{detail}} 原始文件未被修改。"
+  ,"ui.emptyText": "{{file}} 已添加，但没有读取到可用文本。原始文件未被修改。"
+  ,"ui.textReadError": "{{file}} 无法作为文本读取：{{detail}} 原始文件未被修改。"
+  ,"ui.unsupportedFile": "{{file}} 暂不支持这种导入类型。请使用 markdown、txt、docx、png、jpeg 或 jpg。"
+  ,"diagnostic.TRAILING_PARTIAL_LINE": "文件末尾包含不完整的 JSONL 记录，已忽略。"
+  ,"diagnostic.INVALID_JSON_LINE": "第 {{line}} 行不是有效 JSON，已忽略。"
+  ,"diagnostic.CORRUPT_JSONL": "第 {{line}} 行损坏，为了保护 Turn 边界，导入已停止。"
+  ,"diagnostic.EMPTY_FILE": "文件中没有可读取的 JSONL 记录。"
+  ,"diagnostic.AMBIGUOUS_MARKER": "同一文件中有多个 Turn 包含导出标记，无法确定导入边界。"
+  ,"diagnostic.MARKER_NOT_FOUND": "没有在用户消息中找到本次导出标记。"
+  ,"diagnostic.SESSION_ID_MISSING": "这不像完整的 Codex rollout：没有找到 session id。"
+  ,"diagnostic.MULTIPLE_SESSIONS": "文件中混入了多个 Codex session，未执行导入。"
+  ,"diagnostic.NO_USER_TURNS": "没有找到可导入的用户 Turn。请确认拖入的是完整 Codex rollout JSONL。"
+}

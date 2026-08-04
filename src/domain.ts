@@ -189,8 +189,8 @@ export function createTextBoxNode(shape: TextBoxShape = 'rectangle'): ContextNod
   return {
     id: createId('node'),
     type: 'text_box',
-    title: 'Text box',
-    body: 'Double-click or edit this text',
+    title: `${shape}_1`,
+    body: '',
     shape,
     backgroundColor: '#f5f9ff',
     blocks: [],
@@ -200,6 +200,33 @@ export function createTextBoxNode(shape: TextBoxShape = 'rectangle'): ContextNod
     createdAt: now,
     updatedAt: now,
   }
+}
+
+export function textBoxFallbackTitle(workspace: Workspace, nodeId: string, shape: TextBoxShape): string {
+  const count = workspace.nodes.filter(
+    (node) => node.id !== nodeId && node.type === 'text_box' && (node.shape || 'rectangle') === shape,
+  ).length + 1
+  return `${shape}_${count}`
+}
+
+export function textBoxTitleFromBody(body: string, fallbackTitle: string): string {
+  const normalized = body.replace(/\s+/g, ' ').trim()
+  if (!normalized) return fallbackTitle
+
+  const tokens = normalized.match(/[\u3400-\u9fff]|[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g) || []
+  if (tokens.length === 0) return fallbackTitle
+  const selectedTokens = tokens.slice(0, 5)
+  const title = selectedTokens.reduce((result, token, index) => {
+    if (index === 0) return token
+    const previous = selectedTokens[index - 1]
+    const bothLatin = /[A-Za-z0-9]/.test(previous) && /[A-Za-z0-9]/.test(token)
+    return `${result}${bothLatin ? ' ' : ''}${token}`
+  }, '')
+  return tokens.length > 5 ? `${title}...` : title
+}
+
+export function isTextBoxFallbackTitle(title: string, shape: TextBoxShape = 'rectangle'): boolean {
+  return new RegExp(`^${shape}_[0-9]+$`).test(title)
 }
 
 export function statusLabel(status: BlockStatus) {

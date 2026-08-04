@@ -1,0 +1,213 @@
+{
+  "settings.title": "Settings",
+  "settings.language": "Language",
+  "settings.languageHint": "Choose the language for the Context Canvas interface.",
+  "settings.english": "English",
+  "settings.chinese": "中文",
+  "settings.close": "Done",
+  "codex.eyebrow": "Local Codex rollout",
+  "codex.title": "Import Codex session",
+  "codex.description": "No hook or background service is required. Codex exports a local file, then the browser parses it on this machine.",
+  "codex.close": "Close Codex import",
+  "codex.copyCopied": "Export instruction copied. Switch to the target Codex task, paste it, and send it.",
+  "codex.copyCopying": "Copying the export instruction…",
+  "codex.copyFailed": "The browser could not copy automatically. Use the button to copy it.",
+  "codex.copyAgain": "Copy again",
+  "codex.copyInstruction": "Copy instruction",
+  "codex.stepOneTitle": "Send the instruction in the target Codex task",
+  "codex.stepOneBody": "Codex uses the unique marker to locate this rollout and exports the records before the instruction.",
+  "codex.stepTwoTitle": "Allow the required local file permissions",
+  "codex.stepTwoBody": "If prompted, allow reading the Codex sessions directory and writing the Context Canvas Imports folder.",
+  "codex.stepThreeTitle": "Drop the generated .jsonl file below",
+  "codex.stepThreeBody": "The original session file is not changed and content is not uploaded.",
+  "codex.promptDetails": "View export instruction and marker",
+  "codex.dropParsing": "Parsing session…",
+  "codex.dropIdle": "Drop a Codex session file",
+  "codex.dropHint": "or click to choose a .jsonl file",
+  "codex.previewLabel": "Codex import preview",
+  "codex.workingDirectory": "Working directory",
+  "codex.timeRange": "Time range",
+  "codex.userTurns": "User turns",
+  "codex.assistantMessages": "Assistant messages",
+  "codex.agentMessages": "Sub-agent messages",
+  "codex.toolCalls": "Tool calls",
+  "codex.willCreate": "Will create",
+  "codex.importBoundary": "Import boundary",
+  "codex.markerBoundary": "Truncated at this export marker",
+  "codex.prefixBoundary": "Verified export filename prefix",
+  "codex.legacyBoundary": "Legacy/full session; no current export marker",
+  "codex.legacyBoundaryNote": "This is a valid older or full session without the current marker. Review the candidates before importing.",
+  "codex.legacySessionWarning": "No current export marker was found. This valid JSONL will be imported as a full legacy session.",
+  "codex.splitTurns": "Split by Turn (shown when expanded)",
+  "codex.includeCommentary": "Assistant commentary",
+  "codex.includeAgentMessages": "Sub-agent messages",
+  "codex.includeToolCalls": "Tool calls",
+  "codex.includeToolOutputs": "Tool outputs",
+  "codex.connectStartEnd": "Connect Start / End automatically",
+  "codex.boundaryVerified": "Import boundary verified: the export instruction and Codex response are excluded. Tools and sub-agent records are marked needs review and are excluded from the bundle by default.",
+  "codex.boundaryWaiting": "The file will be checked against the unique marker or export filename before import.",
+  "codex.cancel": "Cancel",
+  "codex.importComplex": "Import as Complex Chat",
+  "codex.importLegacy": "Import legacy session",
+  "codex.waitingForFile": "Waiting for a session file",
+  "codex.usedContextTitle": "Used context candidates",
+  "codex.usedContextDescription": "Select context read or mentioned by the agent. Selected readable files become connected nodes.",
+  "codex.contextReadFromRollout": "Read content found in rollout",
+  "codex.contextPathOnly": "Path found; source content was not included",
+  "codex.selectAllUsedContext": "Select all",
+  "codex.clearUsedContext": "Clear selection",
+  "complex.eyebrow": "Complex Chat",
+  "complex.saveExit": "Save & exit",
+  "complex.sourceReadOnly": "The imported source remains read-only",
+  "complex.noBlocks": "No readable blocks in this turn.",
+  "complex.noTurns": "No turns imported",
+  "complex.status.completed": "completed",
+  "complex.status.aborted": "aborted",
+  "complex.status.in_progress": "in progress",
+  "complex.openTurns": "Open turns",
+  "complex.readContext": "Read context",
+  "complex.readContextHint": "Choose additional context to add from this session.",
+  "complex.addSelectedContext": "Add selected context",
+  "notice.imported": "Imported {{count}} Codex turns",
+  "notice.importedOne": "Imported 1 Codex turn",
+  "notice.importSummary": "{{file}} imported as one Complex Chat with {{count}} turns.",
+  "ui.importContext": "Import Context",
+  "ui.importDescription": "Paste text, choose a local markdown/plain-text/docx file, or add a screenshot.",
+  "ui.closeImport": "Close import panel",
+  "ui.chat": "Chat",
+  "ui.document": "Document",
+  "ui.note": "Note",
+  "ui.title": "Title",
+  "ui.sourceText": "Source text",
+  "ui.pastePlaceholder": "Paste copied chat or notes here...",
+  "ui.addDocument": "Add document",
+  "ui.addImage": "Add image",
+  "ui.sliceIntoBlocks": "Slice into blocks",
+  "ui.markdownPreview": "Markdown Preview",
+  "ui.readerHint": "Select text in the preview, then mark it for the bundle. Source imports are read-only and will not be changed.",
+  "ui.charsSelected": "chars selected",
+  "ui.noTextSelected": "No text selected",
+  "ui.noReadableText": "No readable text was imported",
+  "ui.noReadableTextBody": "The file node was created, but no readable document text came through. Try importing again, or paste the document text directly.",
+  "ui.changesAutosaved": "Changes are saved in the workspace automatically.",
+  "ui.saveBack": "Save & Back",
+  "ui.deleteBlock": "Delete block",
+  "ui.removeCustomTag": "Remove custom tag",
+  "ui.customTag": "Custom tag",
+  "ui.reasonNote": "Reason or note...",
+  "ui.box": "Box",
+  "ui.text": "Text",
+  "ui.annotationColor": "Annotation color",
+  "ui.useColor": "Use color {{color}}",
+  "ui.region": "region",
+  "ui.noImage": "No image",
+  "ui.zoom": "Zoom {{zoom}}%",
+  "ui.drawBbox": "Drag on the image to draw a bounding box.",
+  "ui.placeTextBox": "Click or drag on the image to place a text box.",
+  "ui.connection": "Connection",
+  "ui.from": "From",
+  "ui.to": "To",
+  "ui.label": "Label",
+  "ui.related": "related",
+  "ui.deleteConnection": "Delete connection",
+  "ui.selectNode": "Select a node",
+  "ui.selectNodeBody": "Use the canvas to inspect sources, edit blocks, and prepare a bundle.",
+  "ui.reviewText": "Review text",
+  "ui.zoomEdit": "Zoom edit",
+  "ui.textBoxNode": "Text box node",
+  "ui.textBoxPlaceholder": "Double-click to add text",
+  "ui.backgroundColor": "Background color",
+  "ui.shape": "Shape",
+  "ui.shapeMeaning": "Shape meaning (optional)",
+  "ui.shapeMeaningPlaceholder": "e.g. decision, database, information",
+  "ui.shapeHint": "The shape is visual shorthand. The optional meaning is included in structured output as a helper field.",
+  "ui.imageRegions": "Image Regions",
+  "ui.deleteAnnotation": "Delete image annotation",
+  "ui.regionNote": "Region note",
+  "ui.startNode": "Start Node",
+  "ui.startNodeBody": "This is the default entry point for source context. New imports stay unconnected until you decide how the canvas should flow.",
+  "ui.structuredBlocks": "Structured Blocks",
+  "ui.blocks": "Blocks",
+  "ui.all": "all",
+  "ui.readerBlockHint": "Preview and selection live in the center reader. This panel edits the structured blocks that feed the bundle.",
+  "ui.noMatchingBlocks": "No blocks match this filter.",
+  "ui.bundleNode": "Bundle Node",
+  "ui.bundleNodeBody": "This node represents the current output package. Use the preview panel to inspect what Codex will see.",
+  "ui.endNode": "End Node",
+  "ui.endNodeBody": "This is the default output point. Use its canvas controls or the top Bundle button to export the current bundle.",
+  "ui.bundlePreview": "Bundle Preview",
+  "ui.outputUse": "Output / Use",
+  "ui.edit": "Edit",
+  "ui.generated": "Generated",
+  "ui.reset": "Reset",
+  "ui.newCanvas": "Start a New Canvas?",
+  "ui.newCanvasBody": "This clears the current workspace view and saves the new empty canvas locally.",
+  "ui.downloadFirst": "Download the current bundle first if you want to keep the output from this canvas.",
+  "ui.closeDialog": "Close dialog",
+  "ui.cancel": "Cancel",
+  "ui.newWithoutDownload": "New without download",
+  "ui.downloadBundleNew": "Download bundle & new",
+  "ui.dropFiles": "Drop markdown, text, docx, png, jpeg, or jpg files",
+  "ui.localFilesImmediate": "Local files become canvas nodes immediately.",
+  "ui.settings": "Settings",
+  "ui.undo": "Undo",
+  "ui.redo": "Redo",
+  "ui.bundleFormat": "Bundle output format",
+  "ui.addSource": "Add source",
+  "ui.deleteSource": "Delete {{title}}",
+  "ui.autoLater": "Auto orchestration later. For now, you make the context calls.",
+  "ui.savedSuccessfully": "Saved successfully",
+  "ui.localSaveFailed": "Local save failed",
+  "ui.newCanvasReady": "New canvas ready",
+  "ui.nothingToSlice": "Nothing to slice",
+  "ui.resliced": "Re-sliced into {{count}} blocks",
+  "ui.textBoxAdded": "{{shape}} added",
+  "ui.insertCanvasNode": "Insert canvas node",
+  "ui.insert": "Insert",
+  "ui.exportsActive": "Exports active context",
+  "ui.importOrConnect": "Import or connect sources from here."
+  ,"ui.savedLocally": "Saved locally"
+  ,"ui.shape.rectangle": "Rectangle"
+  ,"ui.shape.rounded_rectangle": "Rounded rectangle"
+  ,"ui.shape.diamond": "Diamond"
+  ,"ui.shape.cylinder": "Cylinder"
+  ,"ui.import": "Import"
+  ,"ui.saveLocal": "Save local"
+  ,"ui.newCanvasButton": "New canvas"
+  ,"ui.exportWorkspace": "Export workspace"
+  ,"ui.bundle": "Bundle"
+  ,"ui.sources": "Sources"
+  ,"ui.loadedLocal": "Loaded local workspace"
+  ,"ui.autosaveReady": "Autosave ready"
+  ,"ui.importedSource": "Imported source"
+  ,"ui.untitledSource": "Untitled source"
+  ,"status.included": "included"
+  ,"status.excluded": "excluded"
+  ,"status.pinned": "pinned"
+  ,"status.needs_review": "needs review"
+  ,"ui.invalidCodexFile": "Choose a Codex-exported .jsonl file. Use the regular Import for documents."
+  ,"ui.markerMismatch": "This file has neither the current marker nor the expected export filename. Copy the instruction again and drop the newly generated file."
+  ,"ui.fileReadError": "The browser could not read this file. Please choose it again."
+  ,"ui.fileReadErrorDetail": "The browser could not read this file: {{detail}}"
+  ,"ui.codexLauncher": "Import Codex session"
+  ,"ui.noUsedContext": "No stored context candidates"
+  ,"ui.usedContextRead": "Added {{count}} used context nodes"
+  ,"ui.codexImportedWithContext": "Imported Complex Chat and {{count}} readable context nodes"
+  ,"ui.mammothNote": " Mammoth reported: {{message}}"
+  ,"ui.imageReadError": "{{file}} could not be read as an image: {{detail}} The original file was not changed."
+  ,"ui.docxNoText": "{{file}} was added, but the DOCX parser did not find readable body text. The original file was not changed."
+  ,"ui.docxParserNotes": "{{file}} imported with parser notes.{{notes}}"
+  ,"ui.docxImportError": "{{file}} could not be imported as DOCX: {{detail}} The original file was not changed."
+  ,"ui.emptyText": "{{file}} was added, but no readable text came through. The original file was not changed."
+  ,"ui.textReadError": "{{file}} could not be read as text: {{detail}} The original file was not changed."
+  ,"ui.unsupportedFile": "{{file}} is not a supported import type yet. Use markdown, txt, docx, png, jpeg, or jpg."
+  ,"diagnostic.TRAILING_PARTIAL_LINE": "The final JSONL record was incomplete and was ignored."
+  ,"diagnostic.INVALID_JSON_LINE": "Line {{line}} was not valid JSON and was ignored."
+  ,"diagnostic.CORRUPT_JSONL": "Line {{line}} is corrupt, so the import stopped to protect turn boundaries."
+  ,"diagnostic.EMPTY_FILE": "The file contains no readable JSONL records."
+  ,"diagnostic.AMBIGUOUS_MARKER": "Multiple turns contain the export marker, so the import boundary is ambiguous."
+  ,"diagnostic.MARKER_NOT_FOUND": "The current export marker was not found in a user message."
+  ,"diagnostic.SESSION_ID_MISSING": "This does not look like a complete Codex rollout: no session id was found."
+  ,"diagnostic.MULTIPLE_SESSIONS": "The file contains multiple Codex sessions and was not imported."
+  ,"diagnostic.NO_USER_TURNS": "No importable user turns were found. Make sure this is a complete Codex rollout JSONL file."
+}

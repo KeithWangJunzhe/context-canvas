@@ -1,0 +1,433 @@
+.codex-import-launcher {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.codex-import-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(22, 28, 35, 0.42);
+}
+
+.codex-import-modal {
+  width: min(820px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  scroll-padding-bottom: 72px;
+}
+
+.codex-import-header {
+  margin-bottom: 12px;
+}
+
+.codex-copy-status {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  margin-bottom: 14px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid #cfd6dd;
+  border-radius: 8px;
+  color: #46515c;
+  background: #f7f8fa;
+  font-size: 13px;
+}
+
+.codex-copy-status.is-copied {
+  border-color: #70ba83;
+  color: #245c34;
+  background: #eef9f1;
+}
+
+.codex-copy-status.is-failed {
+  border-color: #dfb36a;
+  color: #72501d;
+  background: #fff8eb;
+}
+
+.codex-copy-icon {
+  display: inline-flex;
+}
+
+.codex-import-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  counter-reset: codex-steps;
+}
+
+.codex-import-steps li {
+  position: relative;
+  min-height: 100px;
+  padding: 12px 11px 11px 42px;
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: #fbfbfc;
+  counter-increment: codex-steps;
+}
+
+.codex-import-steps li::before {
+  content: counter(codex-steps);
+  position: absolute;
+  top: 11px;
+  left: 11px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: #1f6feb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.codex-import-steps strong,
+.codex-import-steps span {
+  display: block;
+}
+
+.codex-import-steps strong {
+  margin-bottom: 5px;
+  color: #26313b;
+  font-size: 13px;
+}
+
+.codex-import-steps span {
+  color: #69727d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.codex-import-steps code {
+  font-size: 11px;
+}
+
+.codex-prompt-details {
+  margin-bottom: 12px;
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: #f7f8fa;
+}
+
+.codex-prompt-details summary {
+  padding: 9px 11px;
+  color: #46515c;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.codex-prompt-details pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  border-top: 1px solid #d8dde3;
+  color: #35404a;
+  background: #fff;
+  white-space: pre-wrap;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.codex-dropzone {
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  padding: 18px;
+  border: 1px dashed #8ca7c8;
+  border-radius: 9px;
+  color: #173d7a;
+  background: #f6f9fd;
+  text-align: center;
+  cursor: pointer;
+}
+
+.codex-dropzone:hover,
+.codex-dropzone:focus,
+.codex-dropzone.is-dragging {
+  border-color: #1f6feb;
+  outline: 3px solid rgba(31, 111, 235, 0.1);
+  background: #eef5ff;
+}
+
+.codex-dropzone span {
+  color: #69727d;
+  font-size: 12px;
+}
+
+.codex-dropzone input {
+  display: none;
+}
+
+.codex-spin {
+  animation: codex-spin 0.85s linear infinite;
+}
+
+@keyframes codex-spin {
+  to { transform: rotate(360deg); }
+}
+
+.codex-import-error {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #df8a8a;
+  border-radius: 8px;
+  color: #8a2b2b;
+  background: #fff0f0;
+  font-size: 12px;
+}
+
+.codex-import-preview {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.codex-preview-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #d8dde3;
+  background: #f7f8fa;
+  color: #58626e;
+  font-size: 12px;
+}
+
+.codex-preview-heading div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.codex-preview-heading strong {
+  overflow: hidden;
+  color: #26313b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codex-file-icon {
+  display: inline-flex;
+  color: #1f6feb;
+}
+
+.codex-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  padding: 10px 12px;
+  gap: 10px 16px;
+}
+
+.codex-preview-grid div {
+  min-width: 0;
+}
+
+.codex-preview-grid dt {
+  margin-bottom: 3px;
+  color: #87919c;
+  font-size: 11px;
+}
+
+.codex-preview-grid dd {
+  margin: 0;
+  overflow: hidden;
+  color: #35404a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.codex-import-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #eef1f4;
+  background: #fbfbfc;
+}
+
+.codex-import-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #46515c;
+  font-size: 12px;
+}
+
+.codex-used-context {
+  display: grid;
+  gap: 9px;
+  padding: 11px 12px 12px;
+  border-top: 1px solid #eef1f4;
+  background: #f8fbff;
+}
+
+.codex-used-context-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.codex-used-context-heading strong,
+.codex-used-context-heading span {
+  display: block;
+}
+
+.codex-used-context-heading strong {
+  color: #26313b;
+  font-size: 12px;
+}
+
+.codex-used-context-heading span {
+  margin-top: 3px;
+  color: #69727d;
+  font-size: 11px;
+}
+
+.codex-used-context-list {
+  display: grid;
+  gap: 5px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.codex-used-context-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #d8e3ef;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.codex-used-context-item:hover {
+  border-color: #8ca7c8;
+}
+
+.codex-used-context-copy {
+  min-width: 0;
+}
+
+.codex-used-context-copy strong,
+.codex-used-context-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codex-used-context-copy strong {
+  color: #35404a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.codex-used-context-copy span {
+  margin-top: 3px;
+  color: #78838e;
+  font-size: 10px;
+}
+
+.text-button {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  color: #1f6feb;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.codex-import-diagnostics {
+  display: grid;
+  gap: 4px;
+  max-height: 112px;
+  overflow: auto;
+  padding: 8px 12px;
+  border-top: 1px solid #dfb36a;
+  color: #72501d;
+  background: #fff8eb;
+  font-size: 11px;
+}
+
+.codex-import-boundary-note {
+  margin: 12px 0;
+  padding: 9px 10px;
+  border-left: 3px solid #8ca7c8;
+  color: #58626e;
+  background: #f4f7fa;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.codex-import-actions {
+  position: sticky;
+  bottom: -18px;
+  z-index: 2;
+  justify-content: flex-end;
+  margin: 0 -18px -18px;
+  padding: 12px 18px 18px;
+  border-top: 1px solid #eef1f4;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8px 18px rgba(22, 28, 35, 0.05);
+}
+
+@media (max-width: 720px) {
+  .codex-import-steps,
+  .codex-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .codex-import-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-height: 700px) {
+  .codex-import-backdrop {
+    padding: 12px;
+  }
+
+  .codex-import-modal {
+    width: min(820px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+  }
+
+  .codex-import-steps li {
+    min-height: 82px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  .codex-import-steps li::before {
+    top: 9px;
+  }
+
+  .codex-dropzone {
+    min-height: 96px;
+    padding: 12px;
+  }
+}

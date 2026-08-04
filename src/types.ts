@@ -1,4 +1,4 @@
-export type NodeType = 'start' | 'document' | 'chat' | 'image' | 'note' | 'text_box' | 'bundle' | 'end'
+export type NodeType = 'start' | 'document' | 'chat' | 'complex_chat' | 'image' | 'note' | 'text_box' | 'bundle' | 'end'
 
 export type BlockStatus = 'included' | 'excluded' | 'pinned' | 'needs_review'
 
@@ -11,6 +11,16 @@ export type BlockTag =
   | (string & {})
 
 export type TextBoxShape = 'rectangle' | 'rounded_rectangle' | 'diamond' | 'cylinder'
+
+export interface ContextTurn {
+  id: string
+  sequence: number
+  title: string
+  status: 'completed' | 'aborted' | 'in_progress'
+  blocks: ContextBlock[]
+  startedAt?: string
+  completedAt?: string
+}
 
 export interface ContextBlock {
   id: string
@@ -57,6 +67,8 @@ export interface ContextNode {
   canvasWidth?: number
   canvasHeight?: number
   canvasPosition?: { x: number; y: number }
+  turns?: ContextTurn[]
+  expanded?: boolean
   blocks: ContextBlock[]
   regions: ImageRegion[]
   createdAt: string

@@ -367,6 +367,82 @@ button:disabled {
   background: #f4f5f6;
 }
 
+.complex-chat-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.workspace-header h2 {
+  margin: 2px 0 4px;
+  font-size: 18px;
+}
+
+.workspace-header p {
+  margin: 0;
+  color: #69727d;
+  font-size: 12px;
+}
+
+.complex-chat-turn-list {
+  display: grid;
+  gap: 12px;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.complex-chat-turn {
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.complex-chat-turn-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf0f2;
+  margin-bottom: 10px;
+}
+
+.complex-chat-turn-header h3 {
+  margin: 3px 0 0;
+  font-size: 14px;
+}
+
+.turn-status {
+  border: 1px solid #cfd6dd;
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: #69727d;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.turn-completed {
+  border-color: #70ba83;
+  background: #f0faf2;
+  color: #276738;
+}
+
+.complex-chat-node {
+  background: #fbfcff;
+  border-color: #a9bfdc;
+}
+
 .document-workspace-bar {
   display: flex;
   align-items: center;
@@ -1138,6 +1214,59 @@ button:disabled {
 
 .modal-actions {
   justify-content: space-between;
+}
+
+.context-review-modal {
+  width: min(560px, calc(100vw - 40px));
+}
+
+.context-review-list {
+  display: grid;
+  gap: 6px;
+  max-height: 360px;
+  overflow: auto;
+  margin: 0 -4px;
+  padding: 4px;
+}
+
+.context-review-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid #d8dde3;
+  border-radius: 7px;
+  background: #fbfbfc;
+  cursor: pointer;
+}
+
+.context-review-item:has(input:disabled) {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.context-review-item span {
+  min-width: 0;
+}
+
+.context-review-item strong,
+.context-review-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-review-item strong {
+  color: #35404a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.context-review-item small {
+  margin-top: 3px;
+  color: #78838e;
+  font-size: 11px;
 }
 
 .confirm-copy {
