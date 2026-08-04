@@ -102,6 +102,7 @@
   "ui.reviewText": "Review text",
   "ui.zoomEdit": "Zoom edit",
   "ui.textBoxNode": "Text box node",
+  "ui.textBoxPlaceholder": "Double-click to add text",
   "ui.backgroundColor": "Background color",
   "ui.shape": "Shape",
   "ui.shapeMeaning": "Shape meaning (optional)",

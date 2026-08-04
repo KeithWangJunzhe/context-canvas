@@ -102,6 +102,7 @@
   "ui.reviewText": "审阅文本",
   "ui.zoomEdit": "放大编辑",
   "ui.textBoxNode": "文字框节点",
+  "ui.textBoxPlaceholder": "双击添加文字",
   "ui.backgroundColor": "背景颜色",
   "ui.shape": "形状",
   "ui.shapeMeaning": "形状含义（可选）",

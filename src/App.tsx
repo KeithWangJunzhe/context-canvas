@@ -56,6 +56,8 @@ import {
   generateBundleJson,
   generateBundleMarkdown,
   sliceTextToBlocks,
+  textBoxFallbackTitle,
+  textBoxTitleFromBody,
   toggleTag,
 } from './domain'
 import { CodexImportLauncher, type CodexImportPayload } from './features/codex-import'
@@ -291,7 +293,7 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
         >
           <div className="text-box-content">
             <span className="text-box-title">{contextNode.title}</span>
-            <span className="text-box-body">{contextNode.body || 'Text box'}</span>
+            <span className="text-box-body">{contextNode.body || t('ui.textBoxPlaceholder')}</span>
             {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
           </div>
         </div>
@@ -1296,7 +1298,11 @@ function Inspector({
     <aside className="inspector" ref={inspectorRef}>
       <div className="inspector-header">
         <span className="node-icon">{nodeIcon(node.type)}</span>
-        <input value={node.title} onChange={(event) => onUpdateNode(node.id, { title: event.target.value })} />
+        {node.type === 'text_box' ? (
+          <span className="node-title">{node.title}</span>
+        ) : (
+          <input value={node.title} onChange={(event) => onUpdateNode(node.id, { title: event.target.value })} />
+        )}
       </div>
 
       {isTextReviewNode(node) && (
@@ -1824,7 +1830,9 @@ export function App() {
   }
 
   const addTextBox = (shape: TextBoxShape) => {
-    addNode(createTextBoxNode(shape))
+    const node = createTextBoxNode(shape)
+    node.title = textBoxFallbackTitle(workspace, node.id, shape)
+    addNode(node)
     setSaveToast(t('ui.textBoxAdded', { shape: t(`ui.shape.${shape}` as 'ui.shape.rectangle') }))
   }
 
@@ -2008,7 +2016,15 @@ export function App() {
   const onUpdateNode = (nodeId: string, patch: Partial<ContextNode>) => {
     updateWorkspace((current) => ({
       ...current,
-      nodes: current.nodes.map((node) => (node.id === nodeId ? { ...node, ...patch, updatedAt: new Date().toISOString() } : node)),
+      nodes: current.nodes.map((node) => {
+        if (node.id !== nodeId) return node
+        const next = { ...node, ...patch }
+        if (node.type === 'text_box' && (patch.body !== undefined || patch.shape !== undefined)) {
+          const shape = (next.shape || 'rectangle') as TextBoxShape
+          next.title = textBoxTitleFromBody(next.body || '', textBoxFallbackTitle(current, nodeId, shape))
+        }
+        return { ...next, updatedAt: new Date().toISOString() }
+      }),
     }))
   }
 
