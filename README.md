@@ -10,6 +10,8 @@
 
 Context Canvas is a frontend-heavy local PoC for interactive context engineering. It helps a person assemble the material around a task before handing it to Codex or another AI agent.
 
+Current release: **1.0.0 Personal Use**. This milestone means the local-first workflow is usable end to end; it does not imply that the future agent integration surface is stable.
+
 The central idea is simple: agents are getting better at execution, while people still need a better interface for expressing intent. Instead of pasting one long, messy prompt, users can bring documents, chat transcripts, screenshots, and notes into a canvas; review them at block or in-text level; connect related sources; and export a compact context bundle.
 
 This is not a finished plugin, memory system, or RAG product. It is a practical experiment in intent management.
@@ -36,6 +38,14 @@ The larger hypothesis is that Context Canvas may eventually become a layer insid
 
 Requirements: Node.js 20+ and pnpm.
 
+Run the packaged local app with npm:
+
+```bash
+npx context-canvas
+```
+
+The CLI prints a local URL and serves the built app on `127.0.0.1`. Use `--port 0` for an available port or `--host 0.0.0.0` when you explicitly need LAN access.
+
 ```bash
 pnpm install
 pnpm run dev
@@ -50,6 +60,14 @@ pnpm run build
 ```
 
 The current build may emit a Vite chunk-size warning because Mammoth is bundled for browser-side docx extraction. It does not prevent the local PoC from running.
+
+### Version roadmap
+
+- `1.0.0`: Personal-use local workflow: canvas assembly, annotation, bundle export, and Codex session context import.
+- `2.0.0`: A calmer and more stable interaction system, with UI refinement driven by real usage.
+- `3.0.0`: Agent integration and feedback loops, including hooks and more direct context exchange.
+
+These are product milestones, not a promise that every minor change between milestones will be breaking under strict Semantic Versioning.
 
 When using Codex Desktop without a system Node installation:
 
@@ -97,6 +115,8 @@ Images are currently stored as Data URLs in the local workspace. This keeps the 
 
 Context Canvas 是一个 frontend-heavy 的本地 PoC，用来在把材料交给 Codex 或其他 AI agent 之前，先把任务上下文和 intent 组织清楚。
 
+当前版本：**1.0.0 Personal Use**。这个版本表示 local-first 工作流已经可以端到端使用，不代表未来 agent integration 的接口已经稳定。
+
 核心想法很简单：agent 越来越擅长执行，但人仍然缺少一种清晰表达意图的界面。用户可以把文档、聊天记录、截图和笔记放进画布，按 block 或文内内容审阅，连接有关联的材料，然后导出一份紧凑的 context bundle，而不是直接把一大段混乱内容复制进聊天框。
 
 它现在还不是一个完整插件、memory 系统或 RAG 产品，而是一个关于 intent management 的可用实验。
@@ -123,6 +143,14 @@ Context Canvas 是一个 frontend-heavy 的本地 PoC，用来在把材料交给
 
 需要 Node.js 20+ 和 pnpm。
 
+也可以直接运行已打包的本地应用：
+
+```bash
+npx context-canvas
+```
+
+CLI 会输出本地访问地址，并默认监听 `127.0.0.1`。需要使用可用端口时可以运行 `npx context-canvas --port 0`；只有明确需要局域网访问时才使用 `--host 0.0.0.0`。
+
 ```bash
 pnpm install
 pnpm run dev
@@ -137,6 +165,14 @@ pnpm run build
 ```
 
 当前构建可能因为浏览器端 docx 解析使用 Mammoth 而出现 Vite chunk-size warning。这不会影响本地 PoC 的运行。
+
+### 版本路线
+
+- `1.0.0`：个人可用的本地工作流：Canvas 编排、标注、Bundle 导出和 Codex session context 导入。
+- `2.0.0`：围绕真实使用继续打磨 UI，让交互更稳定、更平静。
+- `3.0.0`：打通 agent integration 和反馈循环，包括 hook 与更直接的 context 交换。
+
+这些是产品阶段版本，不代表两个阶段之间的每个小改动都会严格遵循 SemVer 的 breaking change 定义。
 
 如果在 Codex Desktop 中没有系统 Node，可以使用：
 

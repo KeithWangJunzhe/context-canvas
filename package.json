@@ -1,25 +1,37 @@
 {
-  "name": "context-canvas-poc",
-  "version": "0.1.0",
-  "private": true,
+  "name": "context-canvas",
+  "version": "1.0.0",
+  "private": false,
+  "description": "A local-first canvas for turning scattered material into agent-ready intent.",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "context-canvas": "bin/context-canvas.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "test:codex-import": "node scripts/verify-codex-import.mjs",
-    "preview": "vite preview --host 127.0.0.1"
-  },
-  "dependencies": {
-    "@xyflow/react": "^12.8.6",
-    "lucide-react": "^0.468.0",
-    "mammoth": "^1.12.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "package:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@xyflow/react": "^12.8.6",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "lucide-react": "^0.468.0",
+    "mammoth": "^1.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
   }
