@@ -66,7 +66,7 @@ export function sliceTextToBlocks(text: string, nodeId: string, mode: 'chat' | '
         role: currentRole,
         speakerName: currentSpeaker || undefined,
         text: content,
-        status: 'needs_review',
+        status: 'included',
         tags: [],
         sourceOrder,
       })
@@ -99,7 +99,7 @@ export function sliceTextToBlocks(text: string, nodeId: string, mode: 'chat' | '
         type: 'message',
         role: 'unknown',
         text: sentence,
-        status: 'needs_review',
+        status: 'included',
         tags: [],
         sourceOrder,
       }
@@ -155,7 +155,7 @@ export function createTextNode(type: 'chat' | 'document' | 'note', title: string
               type: type === 'chat' ? 'message' : 'text',
               role: type === 'chat' ? 'unknown' : undefined,
               text: body,
-              status: type === 'document' ? 'included' : 'needs_review',
+              status: 'included',
               tags: [],
             },
           ],
@@ -302,9 +302,74 @@ function regionToMarkdownLine(node: ContextNode, region: ImageRegion) {
   return `- [${region.status}] ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
 }
 
-function shortConnectionForNode(node: ContextNode, connection: ReturnType<typeof sourceConnections>[number]) {
-  const target = connection.from.id === node.id ? connection.to.title : connection.from.title
-  return `- ${connection.label} -> ${target}`
+export type BundleOutputOptions = {
+  includeConnections?: boolean
+}
+
+function connectionTreeLines(workspace: Workspace) {
+  const nodesById = new Map(workspace.nodes.map((node) => [node.id, node]))
+  const outgoing = new Map<string, typeof workspace.edges>()
+  workspace.edges.forEach((edge) => outgoing.set(edge.from, [...(outgoing.get(edge.from) || []), edge]))
+  const lines: string[] = []
+  const listed = new Set<string>()
+
+  const walk = (nodeId: string, prefix: string, path: Set<string>) => {
+    const edges = outgoing.get(nodeId) || []
+    edges.forEach((edge, index) => {
+      const target = nodesById.get(edge.to)
+      if (!target) return
+      const branch = index === edges.length - 1 ? '`--' : '|--'
+      const nextPrefix = `${prefix}${index === edges.length - 1 ? '   ' : '|  '}`
+      const cycle = path.has(target.id)
+      const alreadyListed = listed.has(target.id)
+      lines.push(`${prefix}${branch} ${connectionLabel(edge.label)} -> ${target.title}${cycle ? ' (cycle)' : alreadyListed ? ' (see above)' : ''}`)
+      if (!cycle && !alreadyListed) {
+        listed.add(target.id)
+        walk(target.id, nextPrefix, new Set([...path, target.id]))
+      }
+    })
+  }
+
+  const start = nodesById.get('node_start') || workspace.nodes.find((node) => node.type === 'start')
+  if (start && (outgoing.get(start.id) || []).length > 0) {
+    lines.push(`- ${start.title}`)
+    listed.add(start.id)
+    walk(start.id, '  ', new Set([start.id]))
+  }
+
+  const connected = new Set(workspace.edges.flatMap((edge) => [edge.from, edge.to]))
+  const incoming = new Set(workspace.edges.map((edge) => edge.to))
+  const otherRoots = workspace.nodes.filter((node) => connected.has(node.id) && !listed.has(node.id) && !incoming.has(node.id))
+  const otherComponents = otherRoots.length > 0
+    ? otherRoots
+    : workspace.nodes.filter((node) => connected.has(node.id) && !listed.has(node.id)).slice(0, 1)
+  if (otherComponents.length > 0) {
+    if (lines.length > 0) lines.push('')
+    lines.push('- Other connected context')
+    otherComponents.forEach((node) => {
+      lines.push(`  \`-- ${node.title}`)
+      listed.add(node.id)
+      walk(node.id, '     ', new Set([node.id]))
+    })
+  }
+
+  const unconnected = workspace.nodes.filter((node) => isContextNode(node) && !connected.has(node.id))
+  if (unconnected.length > 0) {
+    if (lines.length > 0) lines.push('')
+    lines.push('- Unconnected context')
+    unconnected.forEach((node) => lines.push(`  \`-- ${node.title}`))
+  }
+  return lines
+}
+
+function connectionToJson(connection: ReturnType<typeof sourceConnections>[number]) {
+  return {
+    id: connection.id,
+    label: connection.label,
+    from: connection.from,
+    to: connection.to,
+    summary: connection.summary,
+  }
 }
 
 function blockToJson(block: ContextBlock) {
@@ -361,7 +426,7 @@ function skippedRegionIndex(region: ImageRegion) {
   }
 }
 
-export function generateBundleMarkdown(workspace: Workspace) {
+export function generateBundleMarkdown(workspace: Workspace, options: BundleOutputOptions = {}) {
   const sourceSections: string[] = []
 
   workspace.nodes.forEach((node) => {
@@ -397,15 +462,14 @@ export function generateBundleMarkdown(workspace: Workspace) {
       imageRegions.push(line)
     })
 
-    if (included.length === 0 && imageRegions.length === 0) return
-
-    const connections = sourceConnections(workspace, node).map((connection) => shortConnectionForNode(node, connection))
+    const imagePath = node.type === 'image' ? node.sourcePath || node.imageName || node.title : ''
+    if (included.length === 0 && imageRegions.length === 0 && !imagePath) return
 
     sourceSections.push(
       [
         `### ${node.title}`,
         '',
-        ...(connections.length > 0 ? ['Connections:', ...connections, ''] : []),
+        ...(imagePath ? [`- Image path: ${imagePath}`, ''] : []),
         included.join('\n'),
         ...(imageRegions.length > 0 ? ['', '#### Image Annotations', imageRegions.join('\n')] : []),
       ].join('\n'),
@@ -420,13 +484,16 @@ export function generateBundleMarkdown(workspace: Workspace) {
     '',
     'Read this bundle as curated context. Use pinned and included items by default; skip excluded and needs_review material unless the user explicitly asks to revisit it.',
     '',
+    ...(options.includeConnections !== false
+      ? ['## Context Flow', '', ...(connectionTreeLines(workspace).join('\n') || '- No connections'), '']
+      : []),
     '## Context Sources',
     sourceSections.join('\n\n') || '- None',
     '',
   ].join('\n')
 }
 
-export function generateBundleJson(workspace: Workspace) {
+export function generateBundleJson(workspace: Workspace, options: BundleOutputOptions = {}) {
   const nodes = workspace.nodes
     .filter(isContextNode)
     .map((node) => {
@@ -440,18 +507,12 @@ export function generateBundleJson(workspace: Workspace) {
           text,
           shape: node.shape || 'rectangle',
           shape_meaning: node.shapeMeaning?.trim() || undefined,
-          connections: sourceConnections(workspace, node).map((connection) => ({
-            id: connection.id,
-            label: connection.label,
-            from: connection.from,
-            to: connection.to,
-            summary: connection.summary,
-          })),
+          ...(options.includeConnections === false ? {} : { connections: sourceConnections(workspace, node).map(connectionToJson) }),
         }
       }
       const blocks = node.blocks.filter((block) => shouldReadStatus(block.status)).map(blockToJson)
       const regions = node.regions.filter((region) => shouldReadStatus(region.status)).map(regionToJson)
-      if (blocks.length === 0 && regions.length === 0) return null
+      if (blocks.length === 0 && regions.length === 0 && node.type !== 'image') return null
       return {
         id: node.id,
         title: node.title,
@@ -460,13 +521,7 @@ export function generateBundleJson(workspace: Workspace) {
           name: node.sourceName || node.imageName || node.title,
           path: node.sourcePath || node.imageName,
         },
-        connections: sourceConnections(workspace, node).map((connection) => ({
-          id: connection.id,
-          label: connection.label,
-          from: connection.from,
-          to: connection.to,
-          summary: connection.summary,
-        })),
+        ...(options.includeConnections === false ? {} : { connections: sourceConnections(workspace, node).map(connectionToJson) }),
         blocks,
         image_regions: regions,
       }
@@ -497,7 +552,7 @@ export function generateBundleJson(workspace: Workspace) {
       read_policy: 'Use pinned and included content by default. Excluded and needs_review items are indexed only and should be skipped unless explicitly requested.',
       local_workspace_note: 'This JSON is an agent-readable context bundle, not a full canvas restore file. Use Export workspace for local UI state.',
     },
-    relations: workspace.edges.map((edge) => {
+    ...(options.includeConnections === false ? {} : { relations: workspace.edges.map((edge) => {
       const from = workspace.nodes.find((node) => node.id === edge.from)
       const to = workspace.nodes.find((node) => node.id === edge.to)
       return {
@@ -513,7 +568,7 @@ export function generateBundleJson(workspace: Workspace) {
         },
         summary: `${from?.title || edge.from} --${connectionLabel(edge.label)}--> ${to?.title || edge.to}`,
       }
-    }),
+    }) }),
     nodes,
     skipped_nodes,
   }

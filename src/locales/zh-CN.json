@@ -5,6 +5,7 @@
   "settings.english": "English",
   "settings.chinese": "中文",
   "settings.close": "完成",
+  "settings.includeConnections": "在 Bundle 输出中包含连接关系",
   "codex.eyebrow": "本地 Codex rollout",
   "codex.title": "导入 Codex 会话",
   "codex.description": "无需 Hook 或后台服务。Codex 导出本地文件后，由浏览器在本机解析。",

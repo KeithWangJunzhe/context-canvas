@@ -56,4 +56,23 @@ The package has `prepublishOnly` build protection. Confirm the npm package name 
 - [ ] A fresh local install can run `npx context-canvas` after npm publication.
 - [ ] PRs explain what changed, how it was tested, and what remains limited.
 
+## Automation direction / 自动化方向
+
+Do not publish on every push. The recommended release workflow is tag-driven:
+
+1. Merge and validate on `main`.
+2. Update `CHANGELOG.md` and create a version tag such as `v1.0.1`.
+3. A GitHub Action runs build, importer tests, package checks, and `npm publish` using an npm trusted publisher or an `NPM_TOKEN` repository secret.
+4. The same Action creates a GitHub Release from the tag and links to the changelog entry.
+
+This keeps experimental branches and ordinary commits out of npm. Changelog editing should remain human-reviewed; an Action can generate a release draft, but it should not silently rewrite product notes.
+
+不要每次 push 都发布。更合适的是 tag-driven workflow：先合并并验证 `main`，人工更新 `CHANGELOG.md`，创建 `v1.0.1` 这样的 tag，再由 GitHub Action 运行 build、测试、package check 和 `npm publish`，最后创建 GitHub Release。这样实验分支和普通 commit 不会误发布到 npm。Release note 可以让 Action 自动生成草稿，但产品说明仍应人工审阅。
+
+## OCR decision / OCR 决策
+
+Browser OCR is feasible with a library such as Tesseract.js, but it is not a small toggle: language data adds download size, recognition is CPU-heavy, screenshots need preprocessing, and OCR output needs a review state because errors can become misleading context. For the current milestone, keep image paths and manual annotations as the source of truth. Consider OCR later as an explicit `Extract text` action that creates a reviewable text block rather than silently mutating the image node.
+
+浏览器 OCR 技术上可行，例如使用 Tesseract.js，但它不是一个很轻的开关：语言模型会增加下载体积，识别占用 CPU，截图通常需要预处理，而且 OCR 结果必须经过审核，否则错误文字会变成误导 agent 的 context。当前阶段保留图片路径和手动标注作为事实来源。后续如果做 OCR，建议做成明确的 `Extract text` 操作，生成可审核的文本 block，不要静默修改图片节点。
+
 公开前最后要确认：没有个人 workspace、rollout JSONL、私人截图、凭证或本地绝对路径进入仓库；build、importer test、package contents 和 fresh npx 启动都通过。

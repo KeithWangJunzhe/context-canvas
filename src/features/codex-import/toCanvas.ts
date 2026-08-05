@@ -11,11 +11,11 @@ import {
 const defaultPolicy: Record<CodexCanvasPolicyKey, CodexCanvasDisposition> = {
   user: 'included',
   assistant_final: 'included',
-  assistant_commentary: 'needs_review',
-  assistant_unknown: 'needs_review',
-  agent_message: 'needs_review',
-  tool_call: 'needs_review',
-  tool_output: 'needs_review',
+  assistant_commentary: 'included',
+  assistant_unknown: 'included',
+  agent_message: 'included',
+  tool_call: 'included',
+  tool_output: 'included',
 }
 
 function summary(text: string, maxLength = 46) {

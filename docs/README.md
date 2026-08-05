@@ -13,6 +13,7 @@ This directory is the project's working knowledge base. Product decisions live s
 | [`ROADMAP.md`](ROADMAP.md) | Phased product direction and sequencing / 产品阶段和优先级 |
 | [`POC_PRD.md`](POC_PRD.md) | Current PoC scope, data model, and acceptance criteria / 当前 PoC 范围、数据模型和验收标准 |
 | [`RELEASE.md`](RELEASE.md) | Versioning, npm packaging, public-repo checklist, and release workflow / 版本、npm 打包、公开仓库检查和发布流程 |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | Release notes / 版本记录 |
 
 ## Engineering / 工程
 

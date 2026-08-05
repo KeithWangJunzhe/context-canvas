@@ -298,6 +298,9 @@ Current implementation:
 - The package is named `context-canvas` and exposes `npx context-canvas` through a small Node static server.
 - The package contains the built `dist`, CLI entrypoint, README, and package metadata; React and Vite remain build-time dependencies.
 - The CLI binds to `127.0.0.1` by default, supports `--port` and `--host`, and does not read or upload workspace data itself.
+- 2026-08-05 update: imported chat blocks now default to `included`, matching the user's mental model that dropped chat is context; `Ignore` is the fast cleanup path.
+- 2026-08-05 update: Markdown includes a compact `Context Flow` tree for connections, including parallel branches, unfinished branches, cycles, and unconnected context. Settings can omit connection output from Markdown and JSON.
+- 2026-08-05 update: image nodes emit their available local source path/name even when no image region has been annotated.
 - `experiment/codex-complex-chat` has been consolidated into `main` after manual testing of multi-turn import, used-context candidate review, `Read context`, deduplication, legacy JSONL import, localization, persistence, and bundle output.
 
 Release validation:

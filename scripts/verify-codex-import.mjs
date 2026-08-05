@@ -202,7 +202,7 @@ try {
   assert(patch.nodes.length === 1 && patch.edges.length === 2, 'one Turn should create one node and Start/End edges')
   assert(patch.nodes[0].body === undefined, 'Codex nodes must not expose the generic Slice action')
   assert(patch.nodes[0].blocks[0].role === 'user' && patch.nodes[0].blocks[0].status === 'included', 'user block policy is incorrect')
-  assert(patch.nodes[0].blocks.some((block) => block.role === 'tool' && block.status === 'needs_review'), 'tool blocks should default to needs_review')
+  assert(patch.nodes[0].blocks.some((block) => block.role === 'tool' && block.status === 'included'), 'chat blocks should default to included')
   assert(patch.nodes[0].codexImport.codexTurnId === 'turn-1', 'Codex metadata should survive Canvas adaptation')
 
   console.log('Codex import verification passed: marker, identities, canonical messages, mirror dedupe/final upgrade, agents, web search, tools, rollback safety, JSONL integrity, and Canvas patch.')

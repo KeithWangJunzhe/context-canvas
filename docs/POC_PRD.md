@@ -285,7 +285,7 @@ The canvas should stay practical, not decorative. Nodes should be compact and in
 1. User pastes transcript.
 2. App asks for source type or auto-detects.
 3. App slices into message/block candidates.
-4. Blocks default to `needs_review`.
+4. Imported chat blocks default to `included`; users can quickly remove noise with `Ignore`. Tool-level review remains available as an explicit import choice or later annotation.
 5. User can accept all, merge/split, or mark statuses.
 
 ### Text Annotation
@@ -327,7 +327,7 @@ The PoC is successful if:
 
 ## Open Questions
 
-- Should imported blocks default to included or needs_review?
+- Imported chat and document blocks default to included; should future import presets offer a stricter review-first mode?
 - Should excluded content appear in the bundle as warnings, or be omitted entirely by default?
 - How much canvas freedom is useful before it becomes messy?
 - Is relationship labeling worth the interaction cost in PoC?

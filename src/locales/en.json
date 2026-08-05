@@ -5,6 +5,7 @@
   "settings.english": "English",
   "settings.chinese": "中文",
   "settings.close": "Done",
+  "settings.includeConnections": "Include connections in bundle output",
   "codex.eyebrow": "Local Codex rollout",
   "codex.title": "Import Codex session",
   "codex.description": "No hook or background service is required. Codex exports a local file, then the browser parses it on this machine.",

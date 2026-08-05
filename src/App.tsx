@@ -61,6 +61,7 @@ import {
   textBoxTitleFromBody,
   toggleTag,
 } from './domain'
+import type { BundleOutputOptions } from './domain'
 import { CodexImportLauncher, type CodexImportPayload, type CodexUsedContextCandidate } from './features/codex-import'
 import { sampleWorkspace } from './sample'
 import { BlockStatus, BlockTag, BuiltInBlockTag, ContextBlock, ContextEdge, ContextNode, ContextTurn, TextBoxShape, Workspace } from './types'
@@ -100,6 +101,7 @@ const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessi
 const startNodeId = 'node_start'
 const endNodeId = 'node_end'
 const localWorkspaceKey = 'context-canvas.workspace.v1'
+const outputSettingsKey = 'context-canvas.output-settings.v1'
 const imageAnnotationColors = ['#1f6feb', '#d1242f', '#2da44e', '#bf8700', '#8250df']
 const imageTextFonts = ['Inter', 'Georgia', 'Menlo', 'Arial', 'Courier New']
 const textBoxBackgroundColors = ['#f5f9ff', '#f4fbf6', '#fff8df', '#fff3f1', '#f5f1ff']
@@ -114,6 +116,17 @@ function createSystemNode(id: string, type: 'start' | 'end', title: string): Con
     updatedAt: now,
     regions: [],
     blocks: [],
+  }
+}
+
+function loadOutputSettings(): BundleOutputOptions {
+  try {
+    const stored = localStorage.getItem(outputSettingsKey)
+    if (!stored) return { includeConnections: true }
+    const parsed = JSON.parse(stored) as Partial<BundleOutputOptions>
+    return { includeConnections: parsed.includeConnections !== false }
+  } catch {
+    return { includeConnections: true }
   }
 }
 
@@ -1577,7 +1590,13 @@ function NewCanvasModal({
   )
 }
 
-function SettingsModal({ locale, onLocaleChange, onClose }: { locale: Locale; onLocaleChange: (locale: Locale) => void; onClose: () => void }) {
+function SettingsModal({ locale, onLocaleChange, outputSettings, onOutputSettingsChange, onClose }: {
+  locale: Locale
+  onLocaleChange: (locale: Locale) => void
+  outputSettings: BundleOutputOptions
+  onOutputSettingsChange: (settings: BundleOutputOptions) => void
+  onClose: () => void
+}) {
   const { t } = useI18n()
   return (
     <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
@@ -1595,6 +1614,14 @@ function SettingsModal({ locale, onLocaleChange, onClose }: { locale: Locale; on
             <option value="en">{t('settings.english')}</option>
             <option value="zh-CN">{t('settings.chinese')}</option>
           </select>
+        </label>
+        <label className="field checkbox-field">
+          <input
+            type="checkbox"
+            checked={outputSettings.includeConnections !== false}
+            onChange={(event) => onOutputSettingsChange({ ...outputSettings, includeConnections: event.target.checked })}
+          />
+          <span>{t('settings.includeConnections')}</span>
         </label>
         <div className="modal-actions">
           <button className="primary-button" onClick={onClose}>{t('settings.close')}</button>
@@ -1622,6 +1649,7 @@ export function App() {
   const [bundleDraft, setBundleDraft] = useState('')
   const [bundleDraftEdited, setBundleDraftEdited] = useState(false)
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('md')
+  const [outputSettings, setOutputSettings] = useState<BundleOutputOptions>(() => loadOutputSettings())
   const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? t('ui.loadedLocal') : t('ui.autosaveReady')))
   const [saveToast, setSaveToast] = useState('')
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
@@ -1638,10 +1666,10 @@ export function App() {
   const activeTextNode = activeTextNodeId ? workspace.nodes.find((node) => node.id === activeTextNodeId && isTextReviewNode(node)) : undefined
   const activeComplexChat = activeComplexChatId ? workspace.nodes.find((node) => node.id === activeComplexChatId && node.type === 'complex_chat') : undefined
   const activeImage = activeImageId ? workspace.nodes.find((node) => node.id === activeImageId && node.type === 'image') : undefined
-  const bundle = useMemo(() => generateBundleMarkdown(workspace), [workspace])
+  const bundle = useMemo(() => generateBundleMarkdown(workspace, outputSettings), [outputSettings, workspace])
   const generatedOutput = useMemo(
-    () => (outputFormat === 'json' ? JSON.stringify(generateBundleJson(workspace), null, 2) : bundle),
-    [bundle, outputFormat, workspace],
+    () => (outputFormat === 'json' ? JSON.stringify(generateBundleJson(workspace, outputSettings), null, 2) : bundle),
+    [bundle, outputFormat, outputSettings, workspace],
   )
   const bundleToDownload = bundleDraftEdited ? bundleDraft : generatedOutput
   const downloadBundle = useCallback(() => {
@@ -1650,6 +1678,12 @@ export function App() {
   }, [bundleToDownload, outputFormat, workspace])
   const changeOutputFormat = useCallback((format: OutputFormat) => {
     setOutputFormat(format)
+    setBundleDraftEdited(false)
+  }, [])
+
+  const changeOutputSettings = useCallback((settings: BundleOutputOptions) => {
+    setOutputSettings(settings)
+    localStorage.setItem(outputSettingsKey, JSON.stringify(settings))
     setBundleDraftEdited(false)
   }, [])
 
@@ -2521,7 +2555,13 @@ export function App() {
             </div>
           </div>
         )}
-        {showSettings && <SettingsModal locale={locale} onLocaleChange={setLocale} onClose={() => setShowSettings(false)} />}
+        {showSettings && <SettingsModal
+          locale={locale}
+          onLocaleChange={setLocale}
+          outputSettings={outputSettings}
+          onOutputSettingsChange={changeOutputSettings}
+          onClose={() => setShowSettings(false)}
+        />}
         {showNewCanvas && <NewCanvasModal onClose={() => setShowNewCanvas(false)} onCreate={startNewCanvas} onDownloadAndCreate={downloadCurrentBundleAndStartNew} />}
       </div>
     </ReactFlowProvider>

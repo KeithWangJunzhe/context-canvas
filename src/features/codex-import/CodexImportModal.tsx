@@ -210,10 +210,10 @@ function CodexImportModal({
       sourceFileName: parsedFile.file.name,
       connectStartAndEnd: choices.connectStartAndEnd,
       policy: {
-        assistant_commentary: choices.includeCommentary ? 'needs_review' : 'omit',
-        agent_message: choices.includeAgentMessages ? 'needs_review' : 'omit',
-        tool_call: choices.includeToolCalls ? 'needs_review' : 'omit',
-        tool_output: choices.includeToolOutputs ? 'needs_review' : 'omit',
+        assistant_commentary: choices.includeCommentary ? 'included' : 'omit',
+        agent_message: choices.includeAgentMessages ? 'included' : 'omit',
+        tool_call: choices.includeToolCalls ? 'included' : 'omit',
+        tool_output: choices.includeToolOutputs ? 'included' : 'omit',
       },
     })
     onImport({
