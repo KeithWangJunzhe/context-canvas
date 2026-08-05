@@ -261,6 +261,10 @@ function connectionLabel(label: string) {
   return label.trim() || 'related'
 }
 
+function connectionKind(label: string) {
+  return connectionLabel(label).toLowerCase() === 'related' ? 'related' : 'flow'
+}
+
 function sourceConnections(workspace: Workspace, node: ContextNode) {
   return workspace.edges
     .filter((edge) => edge.from === node.id || edge.to === node.id)
@@ -281,6 +285,10 @@ function sourceConnections(workspace: Workspace, node: ContextNode) {
         summary: `${from?.title || edge.from} --${connectionLabel(edge.label)}--> ${to?.title || edge.to}`,
       }
     })
+}
+
+function nodeMapLabel(node: ContextNode) {
+  return `${node.title} [${node.type}] {id: ${node.id}}`
 }
 
 function blockToMarkdownLine(block: ContextBlock) {
@@ -309,7 +317,9 @@ export type BundleOutputOptions = {
 function connectionTreeLines(workspace: Workspace) {
   const nodesById = new Map(workspace.nodes.map((node) => [node.id, node]))
   const outgoing = new Map<string, typeof workspace.edges>()
-  workspace.edges.forEach((edge) => outgoing.set(edge.from, [...(outgoing.get(edge.from) || []), edge]))
+  workspace.edges
+    .filter((edge) => connectionKind(edge.label) === 'flow')
+    .forEach((edge) => outgoing.set(edge.from, [...(outgoing.get(edge.from) || []), edge]))
   const lines: string[] = []
   const listed = new Set<string>()
 
@@ -318,11 +328,12 @@ function connectionTreeLines(workspace: Workspace) {
     edges.forEach((edge, index) => {
       const target = nodesById.get(edge.to)
       if (!target) return
-      const branch = index === edges.length - 1 ? '`--' : '|--'
-      const nextPrefix = `${prefix}${index === edges.length - 1 ? '   ' : '|  '}`
+      const branch = index === edges.length - 1 ? '└──' : '├──'
+      const nextPrefix = `${prefix}${index === edges.length - 1 ? '   ' : '│  '}`
       const cycle = path.has(target.id)
       const alreadyListed = listed.has(target.id)
-      lines.push(`${prefix}${branch} ${connectionLabel(edge.label)} -> ${target.title}${cycle ? ' (cycle)' : alreadyListed ? ' (see above)' : ''}`)
+      const targetLabel = target.type === 'end' ? `${target.title} [output]` : nodeMapLabel(target)
+      lines.push(`${prefix}${branch} [${connectionLabel(edge.label)}] ${targetLabel}${cycle ? ' (cycle)' : alreadyListed ? ' (see above)' : ''}`)
       if (!cycle && !alreadyListed) {
         listed.add(target.id)
         walk(target.id, nextPrefix, new Set([...path, target.id]))
@@ -332,13 +343,15 @@ function connectionTreeLines(workspace: Workspace) {
 
   const start = nodesById.get('node_start') || workspace.nodes.find((node) => node.type === 'start')
   if (start && (outgoing.get(start.id) || []).length > 0) {
-    lines.push(`- ${start.title}`)
+    lines.push(`- ${nodeMapLabel(start)}`)
     listed.add(start.id)
     walk(start.id, '  ', new Set([start.id]))
   }
 
-  const connected = new Set(workspace.edges.flatMap((edge) => [edge.from, edge.to]))
-  const incoming = new Set(workspace.edges.map((edge) => edge.to))
+  const flowEdges = workspace.edges.filter((edge) => connectionKind(edge.label) === 'flow')
+  const connected = new Set(flowEdges.flatMap((edge) => [edge.from, edge.to]))
+  const anyConnection = new Set(workspace.edges.flatMap((edge) => [edge.from, edge.to]))
+  const incoming = new Set(flowEdges.map((edge) => edge.to))
   const otherRoots = workspace.nodes.filter((node) => connected.has(node.id) && !listed.has(node.id) && !incoming.has(node.id))
   const otherComponents = otherRoots.length > 0
     ? otherRoots
@@ -347,25 +360,43 @@ function connectionTreeLines(workspace: Workspace) {
     if (lines.length > 0) lines.push('')
     lines.push('- Other connected context')
     otherComponents.forEach((node) => {
-      lines.push(`  \`-- ${node.title}`)
+      lines.push(`  └── ${nodeMapLabel(node)}`)
       listed.add(node.id)
       walk(node.id, '     ', new Set([node.id]))
     })
   }
 
-  const unconnected = workspace.nodes.filter((node) => isContextNode(node) && !connected.has(node.id))
+  const secondaryOnly = workspace.nodes.filter((node) => isContextNode(node) && !listed.has(node.id) && !connected.has(node.id) && anyConnection.has(node.id))
+  if (secondaryOnly.length > 0) {
+    if (lines.length > 0) lines.push('')
+    lines.push('- Secondary context')
+    secondaryOnly.forEach((node) => lines.push(`  └── ${nodeMapLabel(node)}`))
+  }
+
+  const unconnected = workspace.nodes.filter((node) => isContextNode(node) && !listed.has(node.id) && !anyConnection.has(node.id))
   if (unconnected.length > 0) {
     if (lines.length > 0) lines.push('')
     lines.push('- Unconnected context')
-    unconnected.forEach((node) => lines.push(`  \`-- ${node.title}`))
+    unconnected.forEach((node) => lines.push(`  └── ${nodeMapLabel(node)}`))
   }
   return lines
+}
+
+function secondaryRelationLines(workspace: Workspace) {
+  return workspace.edges
+    .filter((edge) => connectionKind(edge.label) === 'related')
+    .map((edge) => {
+      const from = workspace.nodes.find((node) => node.id === edge.from)
+      const to = workspace.nodes.find((node) => node.id === edge.to)
+      return `- ${from ? nodeMapLabel(from) : edge.from} --[${connectionLabel(edge.label)}]--> ${to ? nodeMapLabel(to) : edge.to}`
+    })
 }
 
 function connectionToJson(connection: ReturnType<typeof sourceConnections>[number]) {
   return {
     id: connection.id,
     label: connection.label,
+    kind: connectionKind(connection.label),
     from: connection.from,
     to: connection.to,
     summary: connection.summary,
@@ -485,9 +516,23 @@ export function generateBundleMarkdown(workspace: Workspace, options: BundleOutp
     'Read this bundle as curated context. Use pinned and included items by default; skip excluded and needs_review material unless the user explicitly asks to revisit it.',
     '',
     ...(options.includeConnections !== false
-      ? ['## Context Flow', '', ...(connectionTreeLines(workspace).join('\n') || '- No connections'), '']
+      ? [
+          '## Reading Rules',
+          '',
+          '- Indentation represents directed context flow, not a filesystem path.',
+          '- Parallel branches are independent context paths.',
+          '- End is an output target, not source content.',
+          '- Secondary Relations are non-hierarchical references.',
+          '- User-written connection labels are semantic notes and should be preserved.',
+          '',
+          '## Context Map',
+          '',
+          ...(connectionTreeLines(workspace).join('\n') || '- No connections'),
+          '',
+          ...(secondaryRelationLines(workspace).length > 0 ? ['## Secondary Relations', '', ...secondaryRelationLines(workspace), ''] : []),
+        ]
       : []),
-    '## Context Sources',
+    '## Context Details',
     sourceSections.join('\n\n') || '- None',
     '',
   ].join('\n')
@@ -550,6 +595,7 @@ export function generateBundleJson(workspace: Workspace, options: BundleOutputOp
       generatedFrom: workspace.title,
       updatedAt: new Date().toISOString(),
       read_policy: 'Use pinned and included content by default. Excluded and needs_review items are indexed only and should be skipped unless explicitly requested.',
+      connection_policy: 'Flow relations describe the primary context map. Related relations are non-hierarchical references and are listed separately in Markdown.',
       local_workspace_note: 'This JSON is an agent-readable context bundle, not a full canvas restore file. Use Export workspace for local UI state.',
     },
     ...(options.includeConnections === false ? {} : { relations: workspace.edges.map((edge) => {
@@ -558,6 +604,7 @@ export function generateBundleJson(workspace: Workspace, options: BundleOutputOp
       return {
         id: edge.id,
         label: connectionLabel(edge.label),
+        kind: connectionKind(edge.label),
         from: {
           id: edge.from,
           title: from?.title || edge.from,
