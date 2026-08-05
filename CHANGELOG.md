@@ -4,6 +4,11 @@ Context Canvas follows a lightweight milestone versioning model. Product milesto
 
 Context Canvas 使用轻量的里程碑版本策略：产品阶段使用 major version，同一阶段内的修复和增量功能使用 patch 或 minor version。
 
+## [1.0.3] - 2026-08-05
+
+- Align the packaged README with the current `1.0.2` release and correct the release documentation before the next npm publish.
+- 修正 npm 包内 README 与当前版本的对应关系，并更新发布文档，为下一次 npm 发布做准备。
+
 ## [1.0.2] - 2026-08-05
 
 - Fix the local CLI banner to read the installed package version instead of displaying a stale hardcoded version.
