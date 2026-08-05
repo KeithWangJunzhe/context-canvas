@@ -28,6 +28,7 @@ import {
   Download,
   FileText,
   Flag,
+  FolderOpen,
   HardDrive,
   Image as ImageIcon,
   Link,
@@ -1653,6 +1654,7 @@ export function App() {
   const [outputSettings, setOutputSettings] = useState<BundleOutputOptions>(() => loadOutputSettings())
   const [saveNotice, setSaveNotice] = useState(() => (loadStoredWorkspace() ? t('ui.loadedLocal') : t('ui.autosaveReady')))
   const [saveToast, setSaveToast] = useState('')
+  const workspaceFileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
   const [usedContextReview, setUsedContextReview] = useState<{ nodeId: string; candidateIds: string[] } | null>(null)
@@ -1971,6 +1973,28 @@ export function App() {
     if (ok) historyFutureRef.current = []
     setSaveNotice(ok ? 'Saved locally' : t('ui.localSaveFailed'))
     setSaveToast(ok ? t('ui.savedSuccessfully') : t('ui.localSaveFailed'))
+  }
+
+  const openWorkspaceFile = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text()) as Partial<Workspace>
+      if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) throw new Error('Invalid workspace')
+      const next = withSystemNodes(parsed as Workspace)
+      historyPastRef.current = []
+      historyFutureRef.current = []
+      setWorkspace(next)
+      setSelectedNodeId(next.nodes.find((node) => node.type !== 'start' && node.type !== 'end')?.id || startNodeId)
+      setSelectedEdgeId(null)
+      setActiveBlockId(null)
+      setActiveTextNodeId(null)
+      setActiveComplexChatId(null)
+      setActiveImageId(null)
+      setBundleDraftEdited(false)
+      setImportNotice('')
+      setSaveToast(t('ui.workspaceLoaded'))
+    } catch {
+      setImportNotice(t('ui.invalidWorkspace'))
+    }
   }
 
   const startNewCanvas = () => {
@@ -2339,6 +2363,21 @@ export function App() {
             <button className="secondary-button" onClick={saveWorkspaceLocally}>
               <HardDrive size={16} />
               {t('ui.saveLocal')}
+            </button>
+            <input
+              ref={workspaceFileInputRef}
+              className="visually-hidden"
+              type="file"
+              accept=".json,application/json"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) void openWorkspaceFile(file)
+                event.target.value = ''
+              }}
+            />
+            <button className="secondary-button" onClick={() => workspaceFileInputRef.current?.click()}>
+              <FolderOpen size={16} />
+              {t('ui.openWorkspace')}
             </button>
             <button className="secondary-button" onClick={() => setShowNewCanvas(true)}>
               <Plus size={16} />
