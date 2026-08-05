@@ -1247,7 +1247,7 @@ function ImageInspector({
                 fontFamily: region.fontFamily,
               }}
             >
-              {label && <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{label}</span>}
+              {label && <span className="annotation-label" style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{label}</span>}
               {tool === 'select' && (['nw', 'ne', 'sw', 'se'] as ResizeCorner[]).map((corner) => (
                 <span
                   key={corner}
