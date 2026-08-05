@@ -196,7 +196,7 @@ export function createTextBoxNode(shape: TextBoxShape = 'rectangle'): ContextNod
     blocks: [],
     regions: [],
     canvasWidth: 176,
-    canvasHeight: 92,
+    canvasHeight: shape === 'diamond' ? 176 : 92,
     createdAt: now,
     updatedAt: now,
   }

@@ -56,7 +56,6 @@ import {
   downloadText,
   generateBundleJson,
   generateBundleMarkdown,
-  isTextBoxFallbackTitle,
   sliceTextToBlocks,
   textBoxFallbackTitle,
   textBoxTitleFromBody,
@@ -92,7 +91,7 @@ type ContextFlowData = ContextNode & {
   onOutputFormatChange?: (format: OutputFormat) => void
   onDownloadBundle?: () => void
   onResliceNode?: (nodeId: string) => void
-  onResizeTextBox?: (nodeId: string, width: number, height: number) => void
+  onResizeNode?: (nodeId: string, width: number, height: number) => void
   onOpenComplexChat?: (nodeId: string) => void
   onReadUsedContext?: (nodeId: string) => void
 }
@@ -288,14 +287,14 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           minWidth={120}
           minHeight={72}
           color="#1f6feb"
-          onResizeEnd={(_, params) => contextNode.onResizeTextBox?.(contextNode.id, params.width, params.height)}
+          onResizeEnd={(_, params) => contextNode.onResizeNode?.(contextNode.id, params.width, params.height)}
         />
         {isDiamond ? (
           <>
             <Handle type="target" position={Position.Top} id="target-top" className="shape-handle diamond-top" />
             <Handle type="source" position={Position.Right} id="source-right" className="shape-handle diamond-right" />
-            <Handle type="target" position={Position.Bottom} id="target-bottom" className="shape-handle diamond-bottom" />
-            <Handle type="source" position={Position.Left} id="source-left" className="shape-handle diamond-left" />
+            <Handle type="source" position={Position.Bottom} id="source-bottom" className="shape-handle diamond-bottom" />
+            <Handle type="target" position={Position.Left} id="target-left" className="shape-handle diamond-left" />
           </>
         ) : (
           <>
@@ -308,9 +307,6 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
           style={{ '--text-box-bg': contextNode.backgroundColor || textBoxBackgroundColors[0] } as CSSProperties}
         >
           <div className="text-box-content">
-            {!isTextBoxFallbackTitle(contextNode.title, contextNode.shape || 'rectangle') && (
-              <span className="text-box-title">{contextNode.title}</span>
-            )}
             <span className="text-box-body">{contextNode.body || t('ui.textBoxPlaceholder')}</span>
             {contextNode.shapeMeaning && <span className="text-box-meaning">{contextNode.shapeMeaning}</span>}
           </div>
@@ -352,6 +348,13 @@ function ContextNodeCard({ data, selected }: NodeProps<ContextFlowNode>) {
   }
   return (
     <div className={`canvas-node ${selected ? 'is-selected' : ''} node-${contextNode.type}`}>
+      <NodeResizer
+        isVisible={selected}
+        minWidth={160}
+        minHeight={82}
+        color="#1f6feb"
+        onResizeEnd={(_, params) => contextNode.onResizeNode?.(contextNode.id, params.width, params.height)}
+      />
       {!isStart && <Handle type="target" position={Position.Left} />}
       <div className="node-header">
         <span className="node-icon">{nodeIcon(contextNode.type)}</span>
@@ -1738,7 +1741,7 @@ export function App() {
                 outputFormat,
                 onOutputFormatChange: changeOutputFormat,
                 onDownloadBundle: downloadBundle,
-                onResizeTextBox,
+                onResizeNode,
               }
             : {
                 ...contextNode,
@@ -1750,14 +1753,14 @@ export function App() {
                   setActiveImageId(null)
                 },
                 onReadUsedContext,
-                onResizeTextBox,
+                onResizeNode,
               }
         if (existing)
           return {
             ...existing,
             style:
-              contextNode.type === 'text_box'
-                ? { ...(existing.style || {}), width: contextNode.canvasWidth || 176, height: contextNode.canvasHeight || 92 }
+              contextNode.canvasWidth || contextNode.canvasHeight
+                ? { ...(existing.style || {}), width: contextNode.canvasWidth, height: contextNode.canvasHeight }
                 : existing.style,
             position: contextNode.canvasPosition || existing.position,
             data,
@@ -1765,11 +1768,10 @@ export function App() {
         return {
           id: contextNode.id,
           type: 'context',
-          position: { x: 140 + index * 42, y: 140 + index * 28 },
-          style:
-            contextNode.type === 'text_box'
-              ? { width: contextNode.canvasWidth || 176, height: contextNode.canvasHeight || 92 }
-              : undefined,
+          position: contextNode.canvasPosition || { x: 140 + index * 42, y: 140 + index * 28 },
+          style: contextNode.canvasWidth || contextNode.canvasHeight
+            ? { width: contextNode.canvasWidth, height: contextNode.canvasHeight }
+            : undefined,
           data,
         }
       }),
@@ -2095,7 +2097,7 @@ export function App() {
       .filter((change) => change.type === 'remove' && 'id' in change)
       .map((change) => change.id)
     const removedIds = requestedRemovedIds.filter((id) => id !== startNodeId && id !== endNodeId)
-    setFlowNodes((nodes) => applyNodeChanges<ContextFlowNode>(changes.filter((change) => !('id' in change) || ![startNodeId, endNodeId].includes(change.id)), nodes))
+    setFlowNodes((nodes) => applyNodeChanges<ContextFlowNode>(changes.filter((change) => !(change.type === 'remove' && 'id' in change && [startNodeId, endNodeId].includes(change.id))), nodes))
     if (removedIds.length === 0) return
     updateWorkspace((current) => ({
       ...current,
@@ -2165,7 +2167,7 @@ export function App() {
     }))
   }
 
-  const onResizeTextBox = (nodeId: string, width: number, height: number) => {
+  const onResizeNode = (nodeId: string, width: number, height: number) => {
     updateWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) =>
@@ -2175,7 +2177,6 @@ export function App() {
   }
 
   const onNodeDragStop = (_event: unknown, node: ContextFlowNode) => {
-    if (node.id === startNodeId || node.id === endNodeId) return
     onUpdateNode(node.id, { canvasPosition: { x: Math.round(node.position.x), y: Math.round(node.position.y) } })
   }
 
