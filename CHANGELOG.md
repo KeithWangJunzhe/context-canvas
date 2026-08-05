@@ -4,6 +4,11 @@ Context Canvas follows a lightweight milestone versioning model. Product milesto
 
 Context Canvas 使用轻量的里程碑版本策略：产品阶段使用 major version，同一阶段内的修复和增量功能使用 patch 或 minor version。
 
+## [1.0.2] - 2026-08-05
+
+- Fix the local CLI banner to read the installed package version instead of displaying a stale hardcoded version.
+- 修复本地 CLI 启动提示硬编码旧版本号的问题，改为读取当前安装包版本。
+
 ## [1.0.1] - 2026-08-05
 
 ### Context curation / Context 编排

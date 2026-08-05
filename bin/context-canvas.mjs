@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-import { createReadStream, existsSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const distRoot = resolve(packageRoot, 'dist')
+const packageVersion = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')).version || 'unknown'
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.gif': 'image/gif',
@@ -27,7 +28,7 @@ function option(name, fallback) {
 }
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  console.log('Context Canvas 1.0.0')
+  console.log(`Context Canvas ${packageVersion}`)
   console.log('Usage: npx context-canvas [--port 5173] [--host 127.0.0.1]')
   process.exit(0)
 }
@@ -72,7 +73,7 @@ function listen() {
   server.listen(port, host, () => {
     const address = server.address()
     const actualPort = typeof address === 'object' && address ? address.port : port
-    console.log(`Context Canvas 1.0.0 is running at http://${host}:${actualPort}/`)
+    console.log(`Context Canvas ${packageVersion} is running at http://${host}:${actualPort}/`)
     console.log('Press Ctrl-C to stop.')
   })
   process.once('SIGINT', () => server.close(() => process.exit(0)))
