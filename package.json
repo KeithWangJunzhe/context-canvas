@@ -1,6 +1,6 @@
 {
   "name": "context-canvas",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "A local-first canvas for turning scattered material into agent-ready intent.",
   "type": "module",

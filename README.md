@@ -10,9 +10,7 @@
 
 Context Canvas is a frontend-heavy local PoC for interactive context engineering. It helps a person assemble the material around a task before handing it to Codex or another AI agent.
 
-Current release: **1.0.0 Personal Use**. This milestone means the local-first workflow is usable end to end; it does not imply that the future agent integration surface is stable.
-
-Current release: **1.0.0 Personal Use**. This milestone means the local-first workflow is usable end to end; it does not imply that the future agent integration surface is stable.
+Current release: **1.0.1 Personal Use patch**. This is a patch release within the `1.0.0` personal-use milestone; the local-first workflow is usable end to end, while the future agent integration surface remains experimental.
 
 The central idea is simple: agents are getting better at execution, while people still need a better interface for expressing intent. Instead of pasting one long, messy prompt, users can bring documents, chat transcripts, screenshots, and notes into a canvas; review them at block or in-text level; connect related sources; and export a compact context bundle.
 
@@ -91,7 +89,7 @@ Start with [`docs/README.md`](docs/README.md) for the document map. The most use
 
 ### Branches and collaboration
 
-- `main`: current `1.0.0` personal-use release baseline.
+- `main`: current `1.0.1` personal-use release baseline.
 - `experiment/codex-complex-chat`: completed Codex / Complex Chat integration branch, now consolidated into `main`.
 - `codex/codex-import-support`: original contributor branch retained as the history of PR #1.
 - New work: use a focused feature branch and open a PR.
@@ -118,7 +116,7 @@ Images are currently stored as Data URLs in the local workspace. This keeps the 
 
 Context Canvas 是一个 frontend-heavy 的本地 PoC，用来在把材料交给 Codex 或其他 AI agent 之前，先把任务上下文和 intent 组织清楚。
 
-当前版本：**1.0.0 Personal Use**。这个版本表示 local-first 工作流已经可以端到端使用，不代表未来 agent integration 的接口已经稳定。
+当前版本：**1.0.1 Personal Use patch**。这是 `1.0.0` 个人可用里程碑内的 patch 版本；local-first 工作流已经可以端到端使用，但未来 agent integration 仍处于实验阶段。
 
 核心想法很简单：agent 越来越擅长执行，但人仍然缺少一种清晰表达意图的界面。用户可以把文档、聊天记录、截图和笔记放进画布，按 block 或文内内容审阅，连接有关联的材料，然后导出一份紧凑的 context bundle，而不是直接把一大段混乱内容复制进聊天框。
 
@@ -197,7 +195,7 @@ package.json         脚本和运行时依赖
 
 ### 分支和协作
 
-- `main`：当前 `1.0.0` 个人可用版本基线。
+- `main`：当前 `1.0.1` 个人可用版本基线。
 - `experiment/codex-complex-chat`：已完成的 Codex / Complex Chat 集成实验分支，成果已收束回 `main`。
 - `codex/codex-import-support`：保留为 PR #1 初始贡献记录的原始分支。
 - 新功能：使用独立 feature branch 并提交 PR。

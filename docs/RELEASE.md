@@ -1,8 +1,8 @@
 # Release And Public Repository Guide
 
-This document describes the current `1.0.0` release posture for Context Canvas. It is intentionally small: the project is local-first, and the first public release should make the working idea inspectable without pretending that future agent integrations are complete.
+This document describes the current `1.0.1` release posture for Context Canvas. It is a patch release within the `1.0.0` personal-use milestone: the project is local-first, and future agent integrations remain experimental.
 
-这份文档说明 Context Canvas 当前 `1.0.0` 的发布状态。它保持克制：项目是 local-first，第一次公开应让别人能检查和运行当前想法，不把未来的 agent integration 伪装成已经完成。
+这份文档说明 Context Canvas 当前 `1.0.1` 的发布状态。这是 `1.0.0` 个人可用里程碑内的 patch 版本：项目是 local-first，未来的 agent integration 仍然是实验方向。
 
 ## Version policy / 版本策略
 
@@ -46,7 +46,7 @@ The package has `prepublishOnly` build protection. Confirm the npm package name 
 
 ## Public repository checklist / 公开仓库检查
 
-- [ ] README describes the current `1.0.0` scope and local-only data behavior.
+- [ ] README describes the current `1.0.1` scope and local-only data behavior.
 - [ ] `CONTRIBUTING.md` explains branches, validation, and privacy boundaries.
 - [ ] Product manifesto and roadmap are clearly framed as hypotheses and direction, not promises.
 - [ ] No personal workspace JSON, rollout JSONL, screenshots with private context, credentials, or local absolute paths are committed.
