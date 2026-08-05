@@ -307,7 +307,8 @@ function regionToMarkdownLine(node: ContextNode, region: ImageRegion) {
     region.fontFamily ? `font=${region.fontFamily}` : '',
   ].filter(Boolean)
   const detailText = details.length > 0 ? ` (${details.join(', ')})` : ''
-  return `- [${region.status}] ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}: ${region.label || 'Untitled region'}${region.note ? `\n  Note: ${region.note}` : ''}`
+  const label = region.label === 'New region' || region.label === 'Text note' ? '' : region.label.trim()
+  return `- [${region.status}] ${node.imageName || node.title} region [${region.box.join(', ')}]${detailText}${label ? `: ${label}` : ''}${region.note ? `\n  Note: ${region.note}` : ''}`
 }
 
 export type BundleOutputOptions = {

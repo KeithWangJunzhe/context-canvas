@@ -1022,6 +1022,11 @@ button:disabled {
   pointer-events: none;
 }
 
+.image-stage.is-selecting .image-annotation {
+  pointer-events: auto;
+  cursor: move;
+}
+
 .image-annotation.draft {
   border-style: dashed;
   background: transparent;

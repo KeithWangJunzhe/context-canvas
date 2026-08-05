@@ -98,6 +98,8 @@
   "ui.reasonNote": "原因或备注……",
   "ui.box": "框选",
   "ui.text": "文字",
+  "ui.cursor": "光标",
+  "ui.moveAnnotation": "选择标注后拖动即可移动。",
   "ui.annotationColor": "标注颜色",
   "ui.useColor": "使用颜色 {{color}}",
   "ui.region": "区域",

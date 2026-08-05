@@ -78,10 +78,11 @@ const textBoxShapes: Array<{ value: TextBoxShape; label: string; icon: typeof Sq
 type TextImportType = 'chat' | 'document' | 'note'
 type ImportResult = { ok: boolean; notice?: string }
 type OutputFormat = 'md' | 'json'
-type ImageTool = 'bbox' | 'text'
+type ImageAnnotationKind = 'bbox' | 'text'
+type ImageTool = 'select' | ImageAnnotationKind
 type BlockFilter = 'all' | BlockStatus
 type ImageAnnotationDraft = {
-  kind: ImageTool
+  kind: ImageAnnotationKind
   box: [number, number, number, number]
   color: string
   fontFamily?: string
@@ -1043,21 +1044,25 @@ function ComplexChatWorkspace({
 function ImageInspector({
   node,
   onAddRegion,
+  onMoveRegion,
   variant = 'panel',
   zoom = 100,
 }: {
   node: ContextNode
   onAddRegion: (annotation: ImageAnnotationDraft) => void
+  onMoveRegion: (regionId: string, box: [number, number, number, number]) => void
   variant?: 'panel' | 'workspace'
   zoom?: number
 }) {
   const { t } = useI18n()
   const stageRef = useRef<HTMLDivElement | null>(null)
-  const [tool, setTool] = useState<ImageTool>('bbox')
+  const [tool, setTool] = useState<ImageTool>('select')
   const [color, setColor] = useState(imageAnnotationColors[0])
   const [fontFamily, setFontFamily] = useState(imageTextFonts[0])
   const [draft, setDraft] = useState<ImageAnnotationDraft | null>(null)
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
+  const [movingRegion, setMovingRegion] = useState<{ id: string; start: { x: number; y: number }; origin: [number, number, number, number] } | null>(null)
+  const [moveDraft, setMoveDraft] = useState<{ id: string; box: [number, number, number, number] } | null>(null)
 
   const pointFromEvent = (event: PointerEvent<HTMLDivElement>) => {
     const rect = stageRef.current?.getBoundingClientRect()
@@ -1068,7 +1073,7 @@ function ImageInspector({
   }
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!node.imageUrl) return
+    if (!node.imageUrl || tool === 'select') return
     const point = pointFromEvent(event)
     if (!point) return
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -1077,7 +1082,28 @@ function ImageInspector({
     setDraft({ kind: tool, box: defaultBox, color, fontFamily: tool === 'text' ? fontFamily : undefined })
   }
 
+  const onRegionPointerDown = (event: PointerEvent<HTMLDivElement>, region: { id: string; box: [number, number, number, number] }) => {
+    if (tool !== 'select') return
+    event.stopPropagation()
+    const point = pointFromEvent(event)
+    if (!point) return
+    stageRef.current?.setPointerCapture(event.pointerId)
+    setMovingRegion({ id: region.id, start: point, origin: region.box })
+    setMoveDraft({ id: region.id, box: region.box })
+  }
+
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (movingRegion) {
+      const point = pointFromEvent(event)
+      if (!point) return
+      const dx = point.x - movingRegion.start.x
+      const dy = point.y - movingRegion.start.y
+      const [left, top, width, height] = movingRegion.origin
+      const nextLeft = Math.max(0, Math.min(100 - width, left + dx))
+      const nextTop = Math.max(0, Math.min(100 - height, top + dy))
+      setMoveDraft({ id: movingRegion.id, box: [nextLeft, nextTop, width, height] })
+      return
+    }
     if (!startPoint) return
     const point = pointFromEvent(event)
     if (!point) return
@@ -1093,6 +1119,11 @@ function ImageInspector({
   }
 
   const onPointerUp = () => {
+    if (movingRegion && moveDraft?.id === movingRegion.id) {
+      onMoveRegion(movingRegion.id, moveDraft.box)
+    }
+    setMovingRegion(null)
+    setMoveDraft(null)
     if (draft) {
       if (draft.kind === 'text') {
         onAddRegion(draft)
@@ -1108,6 +1139,10 @@ function ImageInspector({
     <div>
       <div className="image-tool-panel">
         <div className="segmented compact">
+          <button className={tool === 'select' ? 'active' : ''} onClick={() => setTool('select')}>
+            <MousePointer2 size={14} />
+            {t('ui.cursor')}
+          </button>
           <button className={tool === 'bbox' ? 'active' : ''} onClick={() => setTool('bbox')}>
             <BoxSelect size={14} />
             {t('ui.box')}
@@ -1138,7 +1173,7 @@ function ImageInspector({
       </div>
       <div className={`image-stage-scroll ${variant === 'workspace' ? 'is-workspace' : ''}`}>
         <div
-          className="image-stage"
+          className={`image-stage ${tool === 'select' ? 'is-selecting' : ''}`}
           ref={stageRef}
           style={{ width: `${zoom}%` }}
           onDragStart={(event) => event.preventDefault()}
@@ -1148,23 +1183,28 @@ function ImageInspector({
           onPointerCancel={onPointerUp}
         >
           {node.imageUrl ? <img src={node.imageUrl} alt={node.title} draggable={false} onDragStart={(event) => event.preventDefault()} /> : <div className="empty-image">{t('ui.noImage')}</div>}
-          {node.regions.map((region) => (
+          {node.regions.map((region) => {
+            const box = moveDraft?.id === region.id ? moveDraft.box : region.box
+            const label = region.label === 'New region' || region.label === 'Text note' ? '' : region.label.trim()
+            return (
             <div
               key={region.id}
               className={`image-annotation ${region.kind === 'text' ? 'text-box' : 'bbox'} status-${region.status}`}
+              onPointerDown={(event) => onRegionPointerDown(event, region)}
               style={{
-                left: `${region.box[0]}%`,
-                top: `${region.box[1]}%`,
-                width: `${region.box[2]}%`,
-                height: `${region.box[3]}%`,
+                left: `${box[0]}%`,
+                top: `${box[1]}%`,
+                width: `${box[2]}%`,
+                height: `${box[3]}%`,
                 borderColor: region.color || imageAnnotationColors[0],
                 color: region.color || imageAnnotationColors[0],
                 fontFamily: region.fontFamily,
               }}
             >
-              <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{region.label || (region.kind === 'text' ? t('ui.text') : t('ui.region'))}</span>
+              {label && <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{label}</span>}
             </div>
-          ))}
+            )
+          })}
           {draft && (
             <div
               className={`image-annotation ${draft.kind === 'text' ? 'text-box' : 'bbox'} draft`}
@@ -1181,7 +1221,7 @@ function ImageInspector({
           )}
         </div>
       </div>
-      <p className="hint">{tool === 'bbox' ? t('ui.drawBbox') : t('ui.placeTextBox')}</p>
+      <p className="hint">{tool === 'select' ? t('ui.moveAnnotation') : tool === 'bbox' ? t('ui.drawBbox') : t('ui.placeTextBox')}</p>
     </div>
   )
 }
@@ -1189,10 +1229,12 @@ function ImageInspector({
 function ImageWorkspace({
   node,
   onAddRegion,
+  onMoveRegion,
   onExit,
 }: {
   node: ContextNode
   onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
+  onMoveRegion: (nodeId: string, regionId: string, box: [number, number, number, number]) => void
   onExit: () => void
 }) {
   const { t } = useI18n()
@@ -1210,7 +1252,13 @@ function ImageWorkspace({
         </label>
       </div>
       <div className="image-workspace-inner">
-        <ImageInspector node={node} variant="workspace" zoom={zoom} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />
+        <ImageInspector
+          node={node}
+          variant="workspace"
+          zoom={zoom}
+          onAddRegion={(annotation) => onAddRegion(node.id, annotation)}
+          onMoveRegion={(regionId, box) => onMoveRegion(node.id, regionId, box)}
+        />
       </div>
     </div>
   )
@@ -1227,6 +1275,7 @@ function Inspector({
   onDeleteEdge,
   onUpdateBlock,
   onAddRegion,
+  onMoveRegion,
   onUpdateRegion,
   onDeleteRegion,
   onAddBlock,
@@ -1245,6 +1294,7 @@ function Inspector({
   onDeleteEdge: (edgeId: string) => void
   onUpdateBlock: (nodeId: string, blockId: string, patch: Partial<ContextBlock>) => void
   onAddRegion: (nodeId: string, annotation: ImageAnnotationDraft) => void
+  onMoveRegion: (nodeId: string, regionId: string, box: [number, number, number, number]) => void
   onUpdateRegion: (nodeId: string, regionId: string, patch: { label?: string; note?: string; status?: BlockStatus; color?: string; fontFamily?: string }) => void
   onDeleteRegion: (nodeId: string, regionId: string) => void
   onAddBlock: (nodeId: string, block: Omit<ContextBlock, 'id' | 'nodeId'>) => void
@@ -1345,7 +1395,11 @@ function Inspector({
             <Maximize2 size={16} />
             {t('ui.zoomEdit')}
           </button>
-          <ImageInspector node={node} onAddRegion={(annotation) => onAddRegion(node.id, annotation)} />
+          <ImageInspector
+            node={node}
+            onAddRegion={(annotation) => onAddRegion(node.id, annotation)}
+            onMoveRegion={(regionId, box) => onMoveRegion(node.id, regionId, box)}
+          />
         </>
       )}
 
@@ -2260,7 +2314,7 @@ export function App() {
                   nodeId,
                   kind: annotation.kind,
                   box: annotation.box,
-                  label: annotation.kind === 'text' ? 'Text note' : 'New region',
+                  label: '',
                   note: '',
                   color: annotation.color,
                   fontFamily: annotation.fontFamily,
@@ -2279,6 +2333,17 @@ export function App() {
       ...current,
       nodes: current.nodes.map((node) =>
         node.id === nodeId ? { ...node, regions: node.regions.map((region) => (region.id === regionId ? { ...region, ...patch } : region)) } : node,
+      ),
+    }))
+  }
+
+  const onMoveRegion = (nodeId: string, regionId: string, box: [number, number, number, number]) => {
+    updateWorkspace((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) =>
+        node.id === nodeId
+          ? { ...node, regions: node.regions.map((region) => (region.id === regionId ? { ...region, box } : region)) }
+          : node,
       ),
     }))
   }
@@ -2471,7 +2536,7 @@ export function App() {
                 onExit={() => setActiveComplexChatId(null)}
               />
             ) : activeImage ? (
-              <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onExit={() => setActiveImageId(null)} />
+              <ImageWorkspace node={activeImage} onAddRegion={onAddRegion} onMoveRegion={onMoveRegion} onExit={() => setActiveImageId(null)} />
             ) : (
               <div className="canvas-stage">
                 <CanvasToolbar onAddTextBox={addTextBox} />
@@ -2521,6 +2586,7 @@ export function App() {
             onDeleteEdge={onDeleteEdge}
             onUpdateBlock={onUpdateBlock}
             onAddRegion={onAddRegion}
+            onMoveRegion={onMoveRegion}
             onUpdateRegion={onUpdateRegion}
             onDeleteRegion={onDeleteRegion}
             onAddBlock={onAddBlock}

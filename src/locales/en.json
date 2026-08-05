@@ -98,6 +98,8 @@
   "ui.reasonNote": "Reason or note...",
   "ui.box": "Box",
   "ui.text": "Text",
+  "ui.cursor": "Cursor",
+  "ui.moveAnnotation": "Select an annotation to move it.",
   "ui.annotationColor": "Annotation color",
   "ui.useColor": "Use color {{color}}",
   "ui.region": "region",
