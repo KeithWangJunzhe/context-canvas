@@ -473,13 +473,17 @@ button:disabled {
 }
 
 .canvas-node {
-  width: 236px;
+  width: 100%;
+  height: 100%;
+  min-width: 160px;
   min-height: 118px;
   border: 1px solid #cfd6dd;
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(31, 43, 55, 0.08);
   padding: 11px;
+  display: flex;
+  flex-direction: column;
 }
 
 .canvas-node.is-selected {
@@ -623,6 +627,8 @@ button:disabled {
 }
 
 .node-header {
+  width: 100%;
+  min-width: 0;
   gap: 7px;
   margin-bottom: 9px;
 }
@@ -634,6 +640,7 @@ button:disabled {
 }
 
 .node-title {
+  min-width: 0;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -641,6 +648,8 @@ button:disabled {
 }
 
 .node-meta {
+  width: 100%;
+  min-width: 0;
   justify-content: space-between;
   color: #69727d;
   font-size: 12px;
@@ -648,6 +657,7 @@ button:disabled {
 }
 
 .status-strip {
+  width: 100%;
   flex-wrap: wrap;
   gap: 5px;
 }
