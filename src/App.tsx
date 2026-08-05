@@ -1538,6 +1538,7 @@ function BundlePreview({
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
           spellCheck={false}
+          wrap="off"
         />
       ) : (
         <pre>{generated}</pre>
