@@ -1027,6 +1027,41 @@ button:disabled {
   cursor: move;
 }
 
+.annotation-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #1f6feb;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.annotation-resize-handle.nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.annotation-resize-handle.ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.annotation-resize-handle.sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.annotation-resize-handle.se {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
 .image-annotation.draft {
   border-style: dashed;
   background: transparent;

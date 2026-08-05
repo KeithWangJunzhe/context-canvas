@@ -80,6 +80,7 @@ type ImportResult = { ok: boolean; notice?: string }
 type OutputFormat = 'md' | 'json'
 type ImageAnnotationKind = 'bbox' | 'text'
 type ImageTool = 'select' | ImageAnnotationKind
+type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se'
 type BlockFilter = 'all' | BlockStatus
 type ImageAnnotationDraft = {
   kind: ImageAnnotationKind
@@ -1063,6 +1064,8 @@ function ImageInspector({
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
   const [movingRegion, setMovingRegion] = useState<{ id: string; start: { x: number; y: number }; origin: [number, number, number, number] } | null>(null)
   const [moveDraft, setMoveDraft] = useState<{ id: string; box: [number, number, number, number] } | null>(null)
+  const [resizingRegion, setResizingRegion] = useState<{ id: string; corner: ResizeCorner; start: { x: number; y: number }; origin: [number, number, number, number] } | null>(null)
+  const [resizeDraft, setResizeDraft] = useState<{ id: string; box: [number, number, number, number] } | null>(null)
 
   const pointFromEvent = (event: PointerEvent<HTMLDivElement>) => {
     const rect = stageRef.current?.getBoundingClientRect()
@@ -1092,7 +1095,45 @@ function ImageInspector({
     setMoveDraft({ id: region.id, box: region.box })
   }
 
+  const onRegionResizePointerDown = (event: PointerEvent<HTMLSpanElement>, region: { id: string; box: [number, number, number, number] }, corner: ResizeCorner) => {
+    if (tool !== 'select') return
+    event.stopPropagation()
+    const point = pointFromEvent(event as unknown as PointerEvent<HTMLDivElement>)
+    if (!point) return
+    stageRef.current?.setPointerCapture(event.pointerId)
+    setResizingRegion({ id: region.id, corner, start: point, origin: region.box })
+    setResizeDraft({ id: region.id, box: region.box })
+  }
+
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (resizingRegion) {
+      const point = pointFromEvent(event)
+      if (!point) return
+      const dx = point.x - resizingRegion.start.x
+      const dy = point.y - resizingRegion.start.y
+      const [left, top, width, height] = resizingRegion.origin
+      const right = left + width
+      const bottom = top + height
+      const minSize = 3
+      let nextLeft = left
+      let nextTop = top
+      let nextWidth = width
+      let nextHeight = height
+      if (resizingRegion.corner.includes('w')) {
+        nextLeft = Math.max(0, Math.min(right - minSize, left + dx))
+        nextWidth = right - nextLeft
+      } else {
+        nextWidth = Math.max(minSize, Math.min(100 - left, width + dx))
+      }
+      if (resizingRegion.corner.includes('n')) {
+        nextTop = Math.max(0, Math.min(bottom - minSize, top + dy))
+        nextHeight = bottom - nextTop
+      } else {
+        nextHeight = Math.max(minSize, Math.min(100 - top, height + dy))
+      }
+      setResizeDraft({ id: resizingRegion.id, box: [nextLeft, nextTop, nextWidth, nextHeight] })
+      return
+    }
     if (movingRegion) {
       const point = pointFromEvent(event)
       if (!point) return
@@ -1119,6 +1160,11 @@ function ImageInspector({
   }
 
   const onPointerUp = () => {
+    if (resizingRegion && resizeDraft?.id === resizingRegion.id) {
+      onMoveRegion(resizingRegion.id, resizeDraft.box)
+    }
+    setResizingRegion(null)
+    setResizeDraft(null)
     if (movingRegion && moveDraft?.id === movingRegion.id) {
       onMoveRegion(movingRegion.id, moveDraft.box)
     }
@@ -1184,7 +1230,7 @@ function ImageInspector({
         >
           {node.imageUrl ? <img src={node.imageUrl} alt={node.title} draggable={false} onDragStart={(event) => event.preventDefault()} /> : <div className="empty-image">{t('ui.noImage')}</div>}
           {node.regions.map((region) => {
-            const box = moveDraft?.id === region.id ? moveDraft.box : region.box
+            const box = resizeDraft?.id === region.id ? resizeDraft.box : moveDraft?.id === region.id ? moveDraft.box : region.box
             const label = region.label === 'New region' || region.label === 'Text note' ? '' : region.label.trim()
             return (
             <div
@@ -1202,6 +1248,13 @@ function ImageInspector({
               }}
             >
               {label && <span style={{ backgroundColor: region.color || imageAnnotationColors[0] }}>{label}</span>}
+              {tool === 'select' && (['nw', 'ne', 'sw', 'se'] as ResizeCorner[]).map((corner) => (
+                <span
+                  key={corner}
+                  className={`annotation-resize-handle ${corner}`}
+                  onPointerDown={(event) => onRegionResizePointerDown(event, region, corner)}
+                />
+              ))}
             </div>
             )
           })}
