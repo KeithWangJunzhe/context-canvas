@@ -384,7 +384,12 @@ function connectionTreeLines(workspace: Workspace) {
 
 function secondaryRelationLines(workspace: Workspace) {
   return workspace.edges
-    .filter((edge) => connectionKind(edge.label) === 'related')
+    .filter((edge) => {
+      if (connectionKind(edge.label) !== 'related') return false
+      const from = workspace.nodes.find((node) => node.id === edge.from)
+      const to = workspace.nodes.find((node) => node.id === edge.to)
+      return from?.type !== 'start' && to?.type !== 'end'
+    })
     .map((edge) => {
       const from = workspace.nodes.find((node) => node.id === edge.from)
       const to = workspace.nodes.find((node) => node.id === edge.to)
@@ -527,7 +532,7 @@ export function generateBundleMarkdown(workspace: Workspace, options: BundleOutp
           '',
           '## Context Map',
           '',
-          ...(connectionTreeLines(workspace).join('\n') || '- No connections'),
+          connectionTreeLines(workspace).join('\n') || '- No connections',
           '',
           ...(secondaryRelationLines(workspace).length > 0 ? ['## Secondary Relations', '', ...secondaryRelationLines(workspace), ''] : []),
         ]
